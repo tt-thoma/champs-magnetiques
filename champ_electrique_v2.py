@@ -51,7 +51,7 @@ class Particle:
             og_force = world[point[0]]
             world[point[0]] = force + og_force, vec_x, vec_y
 
-    def next_calc(self, world, size):
+    def calc_next(self, world, size):
         id = round(self.x) + size * round(self.y)
 
         # Accélération
@@ -62,11 +62,9 @@ class Particle:
         self.vx = self.vx + accel_x / unit_time
         self.vy = self.vy + accel_y / unit_time
 
-        # Norme
-        v_vec_norm = sqrt(self.vx**2 + self.vy**2)
-        unit_vec_x = self.vx / v_vec_norm
-        unit_vec_y = self.vy / v_vec_norm
-        # x = v/t
+        # Nouvelle position
+        self.x = self.x + self.vx * unit_time
+        self.y = self.y + self.vy * unit_time
 
 
 class World:
@@ -82,6 +80,7 @@ class World:
     def calc(self) -> None:
         for part in self.particles:
             part.calc(self.world, self.size)
+            part.calc_next(self.world, self.size)
 
     def get_pos(self):
         img = np.zeros((self.size, self.size))
