@@ -137,7 +137,7 @@ class World:
         plt.show()
 
     def get_np(self):
-        pass
+        raise NotImplementedError
 
 
 world = World(2)
