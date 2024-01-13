@@ -29,7 +29,7 @@ class Particle:
             self.mass: float = 1.673 * (10**-27)
         else:
             self.mass: float = 1.675 * (10**-27)
-        self.mass *= abs(charge)
+        #self.mass *= abs(charge)
         
     def calc(self, world, size):
          for point, _ in enumerate(world):
@@ -50,6 +50,10 @@ class Particle:
                 vec_norm = sqrt(vec_x**2 + vec_y**2)
 
                 force = abs((c_coulomb * self.charge) / vec_norm**2)
+                repulsion = 1 / vec_norm**2 if vec_norm < 1 else 0
+
+                force += repulsion
+                
                 uni_mult = force / vec_norm
                 vec_x *= uni_mult
                 vec_y *= uni_mult
@@ -65,26 +69,26 @@ class Particle:
        # Accélération
         accel_x = (world[id, 1] *self.charge)/ self.mass
         accel_y = (world[id, 2] *self.charge)/ self.mass
-        print(world[id,2])
+        print(f"Accel_x: {accel_x}, Accel_y: {accel_y}")
         # Mise à jour de la vitesse
         self.vx += accel_x * unit_time
         self.vy += accel_y * unit_time
-        print(self.vy)
+        
         # Nouvelle position
         self.x += self.vx * unit_time
         self.y += self.vy * unit_time
-        
+        print(f"New position: ({self.x}, {self.y})")
         if self.x <= 0:
-            self.x = 1
+            self.x = 0
   
         elif self.x >= size:  
-            self.x = size - 2
+            self.x = size - 1
  
         if self.y <= 0:
-            self.y = 1
+            self.y = 0
      
         elif self.y >= size:  
-            self.y = size - 2  
+            self.y = size - 1 
       
 
 class World:
@@ -126,11 +130,11 @@ class World:
         self.fig, self.ax = plt.subplots()
         self.ax.axis('on')
         self.img = self.ax.imshow(self.get_pos(), animated=True)
-        ani = FuncAnimation(self.fig, self.animate, frames=1, interval=100, blit=True)
+        ani = FuncAnimation(self.fig, self.animate, frames=100, interval=0, blit=True)
         
         plt.show()
 
-world = World(8)
-world.add_part(Particle(6,4,-100*charge_unit))
-world.add_part(Particle(6,1,100*charge_unit))
+world = World(100)
+world.add_part(Particle(60,40,-100000*charge_unit))
+world.add_part(Particle(60,60,100000*charge_unit))
 world.create_animation()
