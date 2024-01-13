@@ -32,16 +32,16 @@ class Particle:
         self.mass *= abs(charge)
         
     def calc(self, world, size):
-        for point in enumerate(world):
-            print( point)
-            x = point[0] % size
-            y = int(point[0] / size)
+         for point, _ in enumerate(world):
+            x = point % size
+            y = point // size
+        
             
             if x == self.x and y == self.y:
-                print(world[point[0],0])
-                
-
-                
+               
+               
+               continue
+        
             else:
                            
                 vec_x = x - self.x
@@ -54,43 +54,38 @@ class Particle:
                 vec_x *= uni_mult
                 vec_y *= uni_mult
                 
-                og_force = world[point[0],0]
+                og_force = world[point,0]
                 
-                world[point[0]] = force + og_force ,  vec_x , vec_y
+                
+                world[point] = force + og_force ,  vec_x , vec_y
           
     def calc_next(self, world, size):
-        id = (round(self.x) + size * round(self.y)) % size
-
+        id = round((self.x) + size * (self.y) )
+       
        # Accélération
         accel_x = (world[id, 1] *self.charge)/ self.mass
         accel_y = (world[id, 2] *self.charge)/ self.mass
-
+        print(world[id,2])
         # Mise à jour de la vitesse
         self.vx += accel_x * unit_time
         self.vy += accel_y * unit_time
-    
+        print(self.vy)
         # Nouvelle position
         self.x += self.vx * unit_time
         self.y += self.vy * unit_time
         
-        # Vérifier les limites du monde et ajuster la position et la vitesse si nécessaire
-        if self.x < 0:
-            self.x = 0
-            self.vx = -self.vx 
-            accel_x = -accel_x
-        elif self.x > size:
-            self.x = size
-            self.vx = -self.vx
-            accel_x = -accel_x
-        if self.y < 0:
-            self.y = 0
-            self.vy = -self.vy
-            accel_y = -accel_y
-        elif self.y > size:
-            self.y = size
-            self.vy = -self.vy
-            accel_y = -accel_y
-        
+        if self.x <= 0:
+            self.x = 1
+  
+        elif self.x >= size:  
+            self.x = size - 2
+ 
+        if self.y <= 0:
+            self.y = 1
+     
+        elif self.y >= size:  
+            self.y = size - 2  
+      
 
 class World:
     def __init__(self, size: int) -> None:
@@ -108,8 +103,6 @@ class World:
         for part in self.particles:
             part.calc_next(self.world, self.size)
 
-
-
     def get_pos(self):
         img = np.zeros((self.size, self.size))
         for part in self.particles:
@@ -120,7 +113,7 @@ class World:
                 continue
 
             print(f"x: {x}, y: {y}")
-            img[y, x] = 2
+            img[-y, x] = 1
 
         return img
     
@@ -131,20 +124,13 @@ class World:
 
     def create_animation(self):
         self.fig, self.ax = plt.subplots()
-        self.ax.axis('off')
+        self.ax.axis('on')
         self.img = self.ax.imshow(self.get_pos(), animated=True)
-        ani = FuncAnimation(self.fig, self.animate, frames=10, interval=2, blit=True)
+        ani = FuncAnimation(self.fig, self.animate, frames=1, interval=100, blit=True)
+        
         plt.show()
 
-    def get_np(self):
-        pass    
-
-
-world = World(10)
-
-world.add_part(Particle(4,4,1000*charge_unit))
-
-
-
-
+world = World(8)
+world.add_part(Particle(6,4,-100*charge_unit))
+world.add_part(Particle(6,1,100*charge_unit))
 world.create_animation()
