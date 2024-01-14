@@ -4,12 +4,11 @@ from math import sqrt
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 import time
+#c_coulomb = 8.854 * (10**-12)
 c_coulomb = 8.854 * (10**-12)
 charge_unit = 10 * 1.602 * 10**-19
+unit_time = 0.001
 
-unit_time = 0.01
-m2mm = 10**-12
-mm2m = 10**12
 
 
 class Particle:
@@ -33,23 +32,24 @@ class Particle:
         
     def calc(self, world, size):
          for point, _ in enumerate(world):
-            x = point % size
+            x = point % size 
             y = point // size
             if x == self.x and y == self.y:
                continue
         
             else:         
-                vec_x = x - self.x
+                vec_x = x - self.x                                                                 
                 vec_y = y - self.y
                 vec_norm = sqrt(vec_x**2 + vec_y**2)
                 if vec_norm != 0:
-                    force = abs((c_coulomb * self.charge) / vec_norm**2)
-                    repulsion = 1 / vec_norm**2 if vec_norm < 1 else 0
-                    force += repulsion
+                    force =  abs((c_coulomb * self.charge) / vec_norm**2) 
+                   
+                    
 
                     uni_mult = force / vec_norm
-                    vec_x *= uni_mult
-                    vec_y *= uni_mult  
+                    vec_x *= np.sign(self.charge) * uni_mult
+                    vec_y *= np.sign(self.charge) * uni_mult
+                    
                 else:
                     # Gérer le cas où vec_norm est zéro
                     force = 0
@@ -89,7 +89,7 @@ class Particle:
             self.vy += (k1_vy + 2*k2_vy + 2*k3_vy + k4_vy) / 6
             self.x += (k1_x + 2*k2_x + 2*k3_x + k4_x) / 6
             self.y += (k1_y + 2*k2_y + 2*k3_y + k4_y) / 6
-            print(f"accel_x = {accel_x}, accel_y = {accel_y}, vx = {self.vx}  vy = {self.vx}")
+            print(f"accel_x = {accel_x}, accel_y = {accel_y}, vx = {self.vx}  vy = {self.vx}, world[id, 1] = {world[id, 1]}, world[id, 2] = {world[id, 2]}")
             if self.x <= 0:
                 self.x = 0
             elif self.x >= size:  
@@ -120,7 +120,7 @@ class World:
                 continue
             if x < 0 or y < 0:
                 continue
-
+           
             print(f"x: {x}, y: {y}")
             img[-y, x] = 1
 
@@ -130,19 +130,18 @@ class World:
         self.calc()
         self.img.set_array(self.get_pos())
         return [self.img]
-
+    
     def create_animation(self):
         self.fig, self.ax = plt.subplots()
         self.ax.axis('on')
         self.img = self.ax.imshow(self.get_pos(), animated=True)
-        ani = FuncAnimation(self.fig, self.animate, frames=100, interval=0, blit=True)
-        
+        ani = FuncAnimation(self.fig, self.animate, frames=1, interval=1, blit=True)
         plt.show()
 
 world = World(100,0.01)
-world.add_part(Particle(60,40,-500000*charge_unit))
-world.add_part(Particle(60,60,500000*charge_unit))
+world.add_part(Particle(4,4,-1000000*charge_unit))
+world.add_part(Particle(5,5,100000*charge_unit))
 dt = 0.01   
 
-print(f"condition initial : 2 particules 60,40,-100000*charge_unit et 60,60,100000*charge_unit dans un monde 100,0.01 avec dt = 0.01")
+print(f"condition initial : 2 particules 60,40,-100000*charge_unit et 60,60,100000*charge_unit dans un monde 100,0.01  ")
 world.create_animation()
