@@ -134,10 +134,19 @@ class World:
             img[-y, x] = 1
         return img
 
-    def animate(self, i):
+    def animate(self, ax):
         self.calc()
         self.img.set_array(self.get_pos())
-        return [self.img]
+
+        _x, _y = np.meshgrid(np.arange(self.size), np.arange(self.size))
+        # Calc unit vectors
+        unit = np.sqrt(self.world[:, 1] ** 2 + self.world[:, 2] ** 2)
+        unit_x = self.world[:, 1] / unit
+        unit_y = self.world[:, 1] / unit
+
+        self.q = ax.quiver(_x, _y, unit_x, unit_y)
+
+        return [self.img, self.q]
 
     def show_field(self):
         X, Y = np.meshgrid(np.arange(self.size), np.arange(self.size))
@@ -162,12 +171,13 @@ class World:
         fig, ax = plt.subplots()
         ax.axis("on")
         self.img = ax.imshow(self.get_pos(), animated=True)
+
         ani = FuncAnimation(fig, self.animate, frames=1, interval=1, blit=True)
         plt.show()
 
 
 dt = 0.01
-world = World(100, dt)
+world = World(10, dt)
 """
 for i in range(2):
     p = Particle(
@@ -177,8 +187,8 @@ for i in range(2):
     )
     world.add_part((p))
 """
-world.add_part(Particle(20, 20, 50000 * charge_unit))
-world.add_part(Particle(30, 80, 50000 * charge_unit))
-world.calc()
+world.add_part(Particle(2, 2, 50000 * charge_unit))
+world.add_part(Particle(3, 8, 50000 * charge_unit))
+
 world.show_field()
 # world.create_animation()
