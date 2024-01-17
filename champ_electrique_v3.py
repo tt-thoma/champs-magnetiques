@@ -4,6 +4,9 @@ from math import sqrt
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 import time
+import random 
+
+
 #c_coulomb = 8.854 * (10**-12)
 c_coulomb = 8.854 * (10**-12)
 charge_unit = 10 * 1.602 * 10**-19
@@ -51,44 +54,51 @@ class Particle:
         world[:, 2] += vec_y
                
     def calc_next(self, world, size, dt):
-            id = round((self.x) + size * (self.y) )
-            # Accélération
-            accel_x = (world[id, 1] *self.charge)/ self.mass
-            accel_y = (world[id, 2] *self.charge)/ self.mass
-            # Mise à jour de la vitesse et de la position avec RK4
-            k1_vx = dt * accel_x
-            k1_vy = dt *accel_y
-            k1_x = dt * self.vx
-            k1_y = dt * self.vy
+        id = int(self.y) * size + int(self.x)
+        Fx = world[id, 1] *self.charge
+        Fy = world[id, 2] *self.charge
+        accel_x = Fx/ self.mass
+        accel_y = Fy/ self.mass
 
-            k2_vx = dt * (accel_x + 0.5 * k1_vx)
-            k2_vy = dt * (accel_y + 0.5 * k1_vy)
-            k2_x = dt * (self.vx + 0.5 * k1_vx)
-            k2_y = dt * (self.vy + 0.5 * k1_vy)
+        k1_vx = dt * accel_x
+        k1_vy = dt * accel_y
+        k1_x = dt * self.vx
+        k1_y = dt * self.vy
 
-            k3_vx = dt * (accel_x + 0.5 * k2_vx)
-            k3_vy = dt * (accel_y + 0.5 * k2_vy)
-            k3_x = dt * (self.vx + 0.5 * k2_vx)
-            k3_y = dt * (self.vy + 0.5 * k2_vy)
+        k2_vx = dt * (accel_x + 0.5 * k1_vx)
+        k2_vy = dt * (accel_y + 0.5 * k1_vy)
+        k2_x = dt * (self.vx + 0.5 * k1_vx)
+        k2_y = dt * (self.vy + 0.5 * k1_vy)
 
-            k4_vx = dt * (accel_x + k3_vx)
-            k4_vy = dt * (accel_y + k3_vy)
-            k4_x = dt * (self.vx + k3_vx)
-            k4_y = dt * (self.vy + k3_vy)
+        k3_vx = dt * (accel_x + 0.5 * k2_vx)
+        k3_vy = dt * (accel_y + 0.5 * k2_vy)
+        k3_x = dt * (self.vx + 0.5 * k2_vx)
+        k3_y = dt * (self.vy + 0.5 * k2_vy)
 
-            self.vx += (k1_vx + 2*k2_vx + 2*k3_vx + k4_vx) / 6
-            self.vy += (k1_vy + 2*k2_vy + 2*k3_vy + k4_vy) / 6
-            self.x += (k1_x + 2*k2_x + 2*k3_x + k4_x) / 6
-            self.y += (k1_y + 2*k2_y + 2*k3_y + k4_y) / 6
-            print(f", accel_y = {accel_y}, vy {self.vy}, + {(k1_y + 2*k2_y + 2*k3_y + k4_y) / 6}")
-            if self.x <= 0:
-                self.x = 0
-            elif self.x >= size:  
-                self.x = size - 1
-            if self.y <= 0:
-                self.y = 0
-            elif self.y >= size:  
-                self.y = size - 1 
+        k4_vx = dt * (accel_x + k3_vx)
+        k4_vy = dt * (accel_y + k3_vy)
+        k4_x = dt * (self.vx + k3_vx)
+        k4_y = dt * (self.vy + k3_vy)
+
+        new_vx = self.vx + (k1_vx + 2*k2_vx + 2*k3_vx + k4_vx) / 6
+        new_vy = self.vy + (k1_vy + 2*k2_vy + 2*k3_vy + k4_vy) / 6
+        new_x = self.x + (k1_x + 2*k2_x + 2*k3_x + k4_x) / 6
+        new_y = self.y + (k1_y + 2*k2_y + 2*k3_y + k4_y) / 6
+
+        # Vérifiez si la particule est sur le point de sortir des limites
+        if new_x < 0 or new_x > size:
+            new_vx = -new_vx*0.5  # Inversez la vitesse en x
+        else:
+            self.x = new_x  # Mettez à jour la position en x
+
+        if new_y < 0 or new_y > size:
+            new_vy = -new_vy*0.5  # Inversez la vitesse en y
+        else:
+            self.y = new_y  # Mettez à jour la position en y
+
+        self.vx = new_vx  # Mettez à jour la vitesse en x
+        self.vy = new_vy  # Mettez à jour la vitesse en y
+
     def check_collision(self, other):
         return sqrt((self.x - other.x)**2 + (self.y - other.y)**2) <= np.sqrt(2)
 
@@ -120,16 +130,17 @@ class World:
     def get_pos(self):
         img = np.zeros((self.size, self.size))
         for part in self.particles:
-            x,y = round(part.x), round(part.y)
-            if x > self.size or y > self.size:
+            x, y = round(part.x), round(part.y)
+            if x >= self.size or y >= self.size:
                 continue
             if x < 0 or y < 0:
                 continue
-           
+
             print(f"x: {x}, y: {y}")
-            img[y,x] = 1
+            img[-y, x] = 1
 
         return img
+
     
     def animate(self, i):
         self.calc()
@@ -140,12 +151,13 @@ class World:
         self.fig, self.ax = plt.subplots()
         self.ax.axis('on')
         self.img = self.ax.imshow(self.get_pos(), animated=True)
-        ani = FuncAnimation(self.fig, self.animate, frames=1, interval=1, blit=True)
+        ani = FuncAnimation(self.fig, self.animate, frames=10000, interval=1, blit=True)
         plt.show()
 
 world = World(100,0.01)
-world.add_part(Particle(40,10,-100000*charge_unit))
-world.add_part(Particle(40,50,-100000*charge_unit))
+for i in range(100):
+    p = Particle(random.randint(1,98),random.randint(1,98),random.randint(-10,10)*50000*charge_unit)
+    world.add_part((p))
 dt = 0.01   
 
 print(f"condition initial : 2 particules 60,40,-100000*charge_unit et 60,60,100000*charge_unit dans un monde 100,0.01  ")
