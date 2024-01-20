@@ -7,18 +7,27 @@ from math import sqrt
 import random
 import time
 
+
 class Corps:
-    def __init__(self, x, y, vx , vy , ax , ay ,m, n, id):
+    def __init__(self, x, y, vx, vy, ax, ay, m, n, id):
         self.id = id  # Ajouter un identifiant unique
-        self.position = [x,y]
-        self.vitesse = [vx,vy]
-        self.accélération = [ax ,ay]
+        self.position = [x, y]
+        self.vitesse = [vx, vy]
+        self.accélération = [ax, ay]
         self.masse = m
+<<<<<<< HEAD
         self.P = np.zeros([n,2])
         self.V = np.zeros([n,2])
         self.A = np.zeros([n,2])
         
     def déplacement(self,dt):
+=======
+        self.P = np.zeros([n, 2])
+        self.V = np.zeros([n, 2])
+        self.A = np.zeros([n, 2])
+
+    def déplacement(self, dt):
+>>>>>>> cc9f1190516e94637e170414a38134097a01d864
         x = self.position[0]
         y = self.position[1]
         vx = self.vitesse[0]
@@ -41,21 +50,30 @@ class Corps:
         k4_vy = dt * (y + k3_vy)
         k4_x = dt * (vx + k3_vx)
         k4_y = dt * (vy + k3_vy)
-        vx = vx + (k1_vx + 2*k2_vx + 2*k3_vx + k4_vx) / 6
-        vy = vy + (k1_vy + 2*k2_vy + 2*k3_vy + k4_vy) / 6
-        x = x + (k1_x + 2*k2_x + 2*k3_x + k4_x) / 6
-        y = y + (k1_y + 2*k2_y + 2*k3_y + k4_y) / 6
+        vx = vx + (k1_vx + 2 * k2_vx + 2 * k3_vx + k4_vx) / 6
+        vy = vy + (k1_vy + 2 * k2_vy + 2 * k3_vy + k4_vy) / 6
+        x = x + (k1_x + 2 * k2_x + 2 * k3_x + k4_x) / 6
+        y = y + (k1_y + 2 * k2_y + 2 * k3_y + k4_y) / 6
         self.position[0] = x
         self.position[1] = y
         self.vitesse[0] = vx
         self.vitesse[1] = vy
         self.accélération[0] = ax
         self.accélération[1] = ay
+<<<<<<< HEAD
         
     def données(self,i):
         self.P[i,:] = self.position
         self.V[i,:] = self.vitesse
         self.A[i,:] = self.accélération
+=======
+
+    def données(self, i):
+        self.P[i, :] = self.position
+        self.V[i, :] = self.vitesse
+        self.A[i, :] = self.accélération
+
+>>>>>>> cc9f1190516e94637e170414a38134097a01d864
 
 class Monde:
     def __init__(self, largeur, hauteur, taille_cellule, temps_simulation):
@@ -73,17 +91,21 @@ class Monde:
     def simuler(self):
         for t in range(self.temps_simulation):
             for corps in self.corps:
-                corps.déplacement(1/1000)  # Mettre à jour la position, la vitesse et l'accélération
-                self.data.append({
-                    'temps': t,
-                    'x': corps.position[0],
-                    'y': corps.position[1],
-                    'vx': corps.vitesse[0],
-                    'vy': corps.vitesse[1],
-                    'ax': corps.accélération[0],
-                    'ay': corps.accélération[1],
-                    'corps': corps.id  # Utiliser l'identifiant pour le groupement
-                })
+                corps.déplacement(
+                    1 / 1000
+                )  # Mettre à jour la position, la vitesse et l'accélération
+                self.data.append(
+                    {
+                        "temps": t,
+                        "x": corps.position[0],
+                        "y": corps.position[1],
+                        "vx": corps.vitesse[0],
+                        "vy": corps.vitesse[1],
+                        "ax": corps.accélération[0],
+                        "ay": corps.accélération[1],
+                        "corps": corps.id,  # Utiliser l'identifiant pour le groupement
+                    }
+                )
 
     def enregistrer_donnees(self):
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -96,32 +118,32 @@ class Monde:
         fichier_vitesse = f"vitesse_{timestamp}.png"
         fichier_acceleration = f"acceleration_{timestamp}.png"
         df = pd.DataFrame(self.data)
-        df['vitesse'] = np.sqrt(df['vx']**2 + df['vy']**2)
-        df.groupby('corps').vitesse.mean().plot(kind='bar')
+        df["vitesse"] = np.sqrt(df["vx"] ** 2 + df["vy"] ** 2)
+        df.groupby("corps").vitesse.mean().plot(kind="bar")
         plt.savefig(fichier_vitesse)
         plt.clf()
-        df['acceleration'] = np.sqrt(df['ax']**2 + df['ay']**2)
-        df.groupby('corps').acceleration.mean().plot(kind='bar')
+        df["acceleration"] = np.sqrt(df["ax"] ** 2 + df["ay"] ** 2)
+        df.groupby("corps").acceleration.mean().plot(kind="bar")
         plt.savefig(fichier_acceleration)
 
     def animer(self):
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         fichier_animation = f"animation_{timestamp}.mp4"
         fig, ax = plt.subplots()
-        x = [data['x'] for data in self.data if data['temps'] == 0]
-        y = [data['y'] for data in self.data if data['temps'] == 0]
+        x = [data["x"] for data in self.data if data["temps"] == 0]
+        y = [data["y"] for data in self.data if data["temps"] == 0]
         scat = ax.scatter(x, y)
 
         temps_debut = time.time()
 
         def animate(i):
-            x = [data['x'] for data in self.data if data['temps'] == i]
-            y = [data['y'] for data in self.data if data['temps'] == i]
+            x = [data["x"] for data in self.data if data["temps"] == i]
+            y = [data["y"] for data in self.data if data["temps"] == i]
             scat.set_offsets(np.c_[x, y])
 
             # Calculer le temps écoulé et estimer le temps restant
             temps_ecoule = time.time() - temps_debut
-            temps_restant = (temps_ecoule / (i+1)) * (self.temps_simulation - i - 1)
+            temps_restant = (temps_ecoule / (i + 1)) * (self.temps_simulation - i - 1)
             print(f"Il reste environ {temps_restant} secondes.")
 
         ani = FuncAnimation(fig, animate, frames=self.temps_simulation, repeat=False)
@@ -129,7 +151,7 @@ class Monde:
 
 
 monde = Monde(100, 100, 1, 60)
-for i in range(10):  
+for i in range(10):
     x = random.uniform(-10, 10)
     y = random.uniform(-10, 10)
     vx = random.uniform(-10, 10)
