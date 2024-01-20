@@ -1,5 +1,7 @@
 # A
 archive/
+animation*.mp4
+donnees*.csv
 
 # Created by https://www.toptal.com/developers/gitignore/api/jupyternotebooks,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=jupyternotebooks,python
