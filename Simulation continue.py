@@ -125,21 +125,20 @@ class Monde:
         ani = FuncAnimation(fig, animate, frames=self.temps_simulation, repeat=False)
         ani.save(fichier_animation, writer=FFMpegWriter())
 
-# Créer un monde de taille 100x100 pour 1 minute à 1000 FPS
-monde = Monde(100, 100, 1, 60 * 1000)
-for i in range(10):  # Utiliser l'index de la boucle comme identifiant
-    x = random.uniform(0, 100)
-    y = random.uniform(0, 100)
-    vx = random.uniform(-1, 1)
-    vy = random.uniform(-1, 1)
-    ax = random.uniform(-0.1, 0.1)
-    ay = random.uniform(-0.1, 0.1)
+
+monde = Monde(100, 100, 1, 60)
+for i in range(10):  
+    x = random.uniform(-10, 10)
+    y = random.uniform(-10, 10)
+    vx = random.uniform(-10, 10)
+    vy = random.uniform(-10, 10)
+    ax = random.uniform(-10, 10)
+    ay = random.uniform(-10, 10)
     m = random.uniform(1, 10)
-    n = 60 * 1000  # Nombre de pas de temps pour 1 minute à 1000 FPS
+    n = 10000
     c = Corps(x, y, vx, vy, ax, ay, m, n, i)
     monde.ajouter_corps(c)
 
-# Exécuter la simulation pendant 1 minute (60 * 1000 pas de temps)
 monde.simuler()
 monde.enregistrer_donnees()
 monde.enregistrer_graphiques()
