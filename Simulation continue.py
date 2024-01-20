@@ -16,7 +16,8 @@ class Corps:
         self.masse = m
         self.P = np.zeros([n,2])
         self.V = np.zeros([n,2])
-        self.A = np.zeros([n,2])        
+        self.A = np.zeros([n,2])
+        
     def déplacement(self,dt):
         x = self.position[0]
         y = self.position[1]
@@ -50,6 +51,7 @@ class Corps:
         self.vitesse[1] = vy
         self.accélération[0] = ax
         self.accélération[1] = ay
+        
     def données(self,i):
         self.P[i,:] = self.position
         self.V[i,:] = self.vitesse
