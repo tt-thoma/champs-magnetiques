@@ -151,21 +151,33 @@ class World:
     def show_field(self):
         X, Y = np.meshgrid(np.arange(self.size), np.arange(self.size))
         fig, ax = plt.subplots()
-        magnitude = np.sqrt(self.world[:, 1] ** 2 + self.world[:, 2] ** 2)
+    
+        # Calculer la norme des vecteurs
+        magnitude = np.sqrt(self.world[:, 1]**2 + self.world[:, 2]**2)
+    
+        # Normaliser la norme des vecteurs
+        normalized_magnitude = (magnitude - np.min(magnitude)) / (np.max(magnitude) - np.min(magnitude))
+    
+        # Créer des vecteurs unitaires
         ux = self.world[:, 1] / magnitude
         uy = self.world[:, 2] / magnitude
-
-        Q = ax.quiver(
-            X,
-            Y,
-            ux,
-            uy,
-            scale=None,
-        )
-        ax.quiverkey(
-            Q, X=0.3, Y=1.1, U=10, label="Quiver key, length = 10", labelpos="E"
-        )
+    
+        # Créer une échelle de couleurs basée sur la norme normalisée
+        colors = normalized_magnitude
+    
+        # Créer le graphique
+        Q = ax.quiver(X, Y, ux, uy, colors, angles='xy', scale_units='xy', scale=1)
+    
+        # Ajuster l'échelle des vecteurs pour les rendre plus visibles
+        Q.set_UVC(ux/magnitude, uy/magnitude)
+    
+        # Ajuster l'échelle de couleurs pour qu'elle corresponde à la plage de valeurs de la norme normalisée
+        plt.colorbar(Q, ax=ax, label='Norme du vecteur', extend='both')
+    
         plt.show()
+
+
+
 
     def create_animation(self):
         fig, ax = plt.subplots()
@@ -187,8 +199,11 @@ for i in range(2):
     )
     world.add_part((p))
 """
-world.add_part(Particle(2, 2, 50000 * charge_unit))
-world.add_part(Particle(3, 8, 50000 * charge_unit))
+world.add_part(Particle(2, 2, 500000 * charge_unit))
+world.add_part(Particle(3, 8, 500000 * charge_unit))
+world.particles[0].calc(world.world, 10)
+world.particles[1].calc(world.world, 10)
+
 
 world.show_field()
 # world.create_animation()
