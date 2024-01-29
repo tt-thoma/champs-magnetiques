@@ -3,10 +3,8 @@ import numpy as np
 from math import sqrt
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
-import random
 
 
-# c_coulomb = 8.854 * (10**-12)
 c_coulomb = 8.854 * (10**-12)
 charge_unit = 10 * 1.602 * 10**-19
 unit_time = 0.001
@@ -138,46 +136,36 @@ class World:
         self.calc()
         self.img.set_array(self.get_pos())
 
+        # _x, _y = np.meshgrid(np.arange(self.size), np.arange(self.size))
+        # Calc unit vectors
+        # unit = np.sqrt(self.world[:, 1] ** 2 + self.world[:, 2] ** 2)
+        # unit_x = self.world[:, 1] / unit
+        # unit_y = self.world[:, 1] / unit
+
+        # self.q = ax.quiver(_x, _y, unit_x, unit_y)
+
+        return self.img  # [self.img, self.q]
+
+    def show_field(self):
+        _, ax = plt.subplots()
+
         _x, _y = np.meshgrid(np.arange(self.size), np.arange(self.size))
         # Calc unit vectors
         unit = np.sqrt(self.world[:, 1] ** 2 + self.world[:, 2] ** 2)
         unit_x = self.world[:, 1] / unit
-        unit_y = self.world[:, 1] / unit
+        unit_y = -self.world[:, 2] / unit
 
-        self.q = ax.quiver(_x, _y, unit_x, unit_y)
+        shape = (self.size, self.size)
 
-        return [self.img, self.q]
+        q = ax.quiver(_x, _y, unit_x.reshape(shape), unit_y.reshape(shape))
 
-    def show_field(self):
-        X, Y = np.meshgrid(np.arange(self.size), np.arange(self.size))
-        fig, ax = plt.subplots()
-    
-        # Calculer la norme des vecteurs
-        magnitude = np.sqrt(self.world[:, 1]**2 + self.world[:, 2]**2)
-    
-        # Normaliser la norme des vecteurs
-        normalized_magnitude = (magnitude - np.min(magnitude)) / (np.max(magnitude) - np.min(magnitude))
-    
-        # Créer des vecteurs unitaires
-        ux = self.world[:, 1] / magnitude
-        uy = self.world[:, 2] / magnitude
-    
-        # Créer une échelle de couleurs basée sur la norme normalisée
-        colors = normalized_magnitude
-    
-        # Créer le graphique
-        Q = ax.quiver(X, Y, ux, uy, colors, angles='xy', scale_units='xy', scale=1)
-    
-        # Ajuster l'échelle des vecteurs pour les rendre plus visibles
-        Q.set_UVC(ux/magnitude, uy/magnitude)
-    
         # Ajuster l'échelle de couleurs pour qu'elle corresponde à la plage de valeurs de la norme normalisée
-        plt.colorbar(Q, ax=ax, label='Norme du vecteur', extend='both')
-    
+        # plt.colorbar(q, ax=ax, label='Norme du vecteur', extend='both')
+        # plt.show()
+
+        print(unit.shape)
+        plt.imshow(unit.reshape((self.size, self.size)))
         plt.show()
-
-
-
 
     def create_animation(self):
         fig, ax = plt.subplots()
@@ -189,7 +177,7 @@ class World:
 
 
 dt = 0.01
-world = World(10, dt)
+world = World(100, dt)
 """
 for i in range(2):
     p = Particle(
@@ -199,10 +187,8 @@ for i in range(2):
     )
     world.add_part((p))
 """
-world.add_part(Particle(2, 2, 500000 * charge_unit))
-world.add_part(Particle(3, 8, 500000 * charge_unit))
-world.particles[0].calc(world.world, 10)
-world.particles[1].calc(world.world, 10)
+world.add_part(Particle(20, 20, 500000 * charge_unit))
+world.calc()
 
 
 world.show_field()
