@@ -5,7 +5,7 @@ from math import sqrt
 
 class Particle:
     def __init__(
-        self, x: int, y: int, charge: float, vx: float = 0.0, vy: float = 0.0
+        self, x , y , charge: float, vx: float = 0.0, vy: float = 0.0
     ) -> None:
         self.x: float = x
         self.y: float = y
