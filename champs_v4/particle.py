@@ -1,6 +1,6 @@
 import constants as const
 import numpy as np
-
+from corps import Particle
 from math import sqrt
 
 class Particle:
@@ -60,8 +60,8 @@ class Particle:
 
     def calc_next(self, world, size, dt):
         id = int(self.y) * size + int(self.x)
-        Fx = world[id, 1] * self.charge
-        Fy = world[id, 2] * self.charge
+        Fx = (world[id, 1] )* self.charge
+        Fy =() world[id, 2] )* self.charge
         accel_x = Fx / self.mass
         accel_y = Fy / self.mass
         k1_vx = dt * accel_x

@@ -1,8 +1,11 @@
 import numpy as np
-from particle import Particle
+from corps import Particle
 from math import sqrt
 import constants as const
 import matplotlib.pyplot as plt
+from scipy.ndimage import convolve
+from scipy import integrate
+
 class World:
     def __init__(self, size, cell_size , dt: float) -> None:
         self.size: int = size
@@ -63,6 +66,14 @@ class World:
 
         # Ajouter sum_vec à self.field_E
         self.field_E += sum_vec
+        
+    def calc_B(self):
+        E = self.field_E
+        curl_E = np.array(np.gradient(E))[np.array([1,2,0])]-np.array(np.gradient(E))[np.array([2,0,1])]
+        dBdt = -curl_E
+        B = integrate.simps(dBdt, dx=self.dt)
+        self.field_B = B
+    
     def E_norm(self):
         # Calculer la norme du champ électrique
         E_norm = np.sqrt(np.sum(self.field_E**2, axis=2))
@@ -85,7 +96,7 @@ class World:
         plt.show()
 
 w = World(100,1,1)
-w.add_part(Particle(50,50,10000000000000000,0,0))
+w.add_part(Particle(50,50,1000000000,0,0))
 w.calc_E()
 e = w.E_norm()
 w.visualize_E()
