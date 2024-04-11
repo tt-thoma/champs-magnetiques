@@ -5,24 +5,58 @@ from math import sqrt
 
 class Particle:
     def __init__(
-        self, x: int, y: int, charge: float, vx: float = 0.0, vy: float = 0.0 , ax: float = 0.0 , ay: float = 0.0
+        self, x , y , charge: float, vx: float = 0.0, vy: float = 0.0
     ) -> None:
         self.x: float = x
         self.y: float = y
         self.vx: float = vx
         self.vy: float = vy
-        self.ax: float = ax
-        self.ay: float = ay
-        self.charge: float = charge
-        
-        if charge < 0:
-            self.mass: float = const.charge_electron
-        elif charge > 0:
-            self.mass: float = const.charge_proton
-        
 
-    def calc(self, world, size: int) -> None:
-       pass
+        self.charge: float = charge
+
+        if charge < 0:
+            self.mass: float = 9.11 * (10**-27)
+        elif charge > 0:
+            self.mass: float = 1.673 * (10**-27)
+        else:
+            self.mass: float = 1.675 * (10**-27)
+
+    def calc_E(self, world_E: np.ndarray):
+        shape = world_E.shape
+        for y in range(shape[1]):
+            for x in range(shape[0]):
+                vec_x = x - self.x
+                vec_y = y - self.y
+                vec_norm2 = vec_x**2 + vec_y**2 + 1e-9
+                vec_norm = sqrt(vec_norm2)
+                
+                force_norm = abs(const.k*self.charge)/vec_norm2
+                uni_multi = force_norm / vec_norm
+                vec_x *= uni_multi * np.sign(self.charge)
+                vec_y *= uni_multi * np.sign(self.charge)
+                
+                world_E[x, y] += vec_x, vec_y
+            
+    def _calc(self, world, size: int) -> None:
+        points = np.arange(size**2)
+        x = points % size
+        y = points // size
+
+        mask = (x != self.x) | (y != self.y)
+        vec_x = np.where(mask, x - self.x, 0).astype(float)
+        vec_y = np.where(mask, y - self.y, 0).astype(float)
+
+        vec_norm = np.sqrt(vec_x**2 + vec_y**2) + 1e-9
+
+        force = abs(np.where(mask, abs((const.k * self.charge) / vec_norm**2), 0))
+
+        uni_mult = force / vec_norm
+        vec_x *= uni_mult * np.sign(self.charge)
+        vec_y *= uni_mult * np.sign(self.charge)
+
+        world[:, 0] += force
+        world[:, 1] += vec_x
+        world[:, 2] += vec_y
 
     def calc_next(self, world, size, dt):
         id = int(self.y) * size + int(self.x)
