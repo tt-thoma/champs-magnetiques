@@ -3,10 +3,9 @@ import numpy as np
 
 from math import sqrt
 
+
 class Particle:
-    def __init__(
-        self, x , y , charge: float, vx: float = 0.0, vy: float = 0.0
-    ) -> None:
+    def __init__(self, x, y, charge: float, vx: float = 0.0, vy: float = 0.0) -> None:
         self.x: float = x
         self.y: float = y
         self.vx: float = vx
@@ -29,14 +28,14 @@ class Particle:
                 vec_y = y - self.y
                 vec_norm2 = vec_x**2 + vec_y**2 + 1e-9
                 vec_norm = sqrt(vec_norm2)
-                
-                force_norm = abs(const.k*self.charge)/vec_norm2
+
+                force_norm = abs(const.k * self.charge) / vec_norm2
                 uni_multi = force_norm / vec_norm
                 vec_x *= uni_multi * np.sign(self.charge)
                 vec_y *= uni_multi * np.sign(self.charge)
-                
+
                 world_E[x, y] += vec_x, vec_y
-            
+
     def _calc(self, world, size: int) -> None:
         points = np.arange(size**2)
         x = points % size
@@ -101,4 +100,3 @@ class Particle:
 
         self.vx = new_vx
         self.vy = new_vy
-

@@ -3,31 +3,36 @@ from particle import Particle
 from math import sqrt
 import constants as const
 import matplotlib.pyplot as plt
+
+
 class World:
-    def __init__(self, size, cell_size , dt: float) -> None:
+    def __init__(self, size, cell_size, dt: float) -> None:
         self.size: int = size
         self.dt: float = dt
         self.cell_size = cell_size
-        self.field_E = np.zeros((size//cell_size, size//cell_size, 2), float)
-        self.field_B = np.zeros((size//cell_size, size//cell_size, 2), float)
-        
+        self.field_E = np.zeros((size // cell_size, size // cell_size, 2), float)
+        self.field_B = np.zeros((size // cell_size, size // cell_size, 2), float)
+
         self.particles: list[Particle] = []
 
     def add_part(self, part: Particle) -> None:
         self.particles.append(part)
+
     def calc_E(self):
         # Obtenir la forme du champ électrique
         shape = self.field_E.shape
-        
+
         # Créer une grille de coordonnées pour chaque point dans le monde
         # Convertir les coordonnées de la grille en unités de monde
-        x_coords, y_coords = np.meshgrid(np.arange(shape[0]), np.arange(shape[1])) * self.cell_size
-        
+        x_coords, y_coords = (
+            np.meshgrid(np.arange(shape[0]), np.arange(shape[1])) * self.cell_size
+        )
+
         # Extraire les positions x et y ainsi que les charges de toutes les particules
         part_x = np.array([part.x for part in self.particles])
         part_y = np.array([part.y for part in self.particles])
         part_charge = np.array([part.charge for part in self.particles])
-        
+
         # Calculer le vecteur entre chaque point de la grille et chaque particule
         vec_x = x_coords[:, :, None] - part_x
         vec_y = y_coords[:, :, None] - part_y
@@ -39,7 +44,7 @@ class World:
         vec_norm = np.sqrt(vec_norm2)
 
         # Calculer la norme de la force électrique à chaque point de la grille en utilisant la loi de Coulomb
-        force_norm = abs(const.k*part_charge)/vec_norm2
+        force_norm = abs(const.k * part_charge) / vec_norm2
 
         # Normaliser le vecteur de force pour obtenir un vecteur unitaire dans la direction de la force
         uni_multi = force_norm / vec_norm
@@ -60,11 +65,13 @@ class World:
 
         # Ajouter sum_vec à self.field_E
         self.field_E += sum_vec
+
     def E_norm(self):
         # Calculer la norme du champ électrique
         E_norm = np.sqrt(np.sum(self.field_E**2, axis=2))
-    
+
         return E_norm
+
     def visualize_E(self):
         # Créer une grille de coordonnées
         x = np.arange(0, self.size, self.cell_size)
@@ -72,8 +79,8 @@ class World:
         X, Y = np.meshgrid(x, y)
 
         # Calculer les composantes du champ électrique
-        E_x = self.field_E[:,:,0]
-        E_y = self.field_E[:,:,1]
+        E_x = self.field_E[:, :, 0]
+        E_y = self.field_E[:, :, 1]
 
         # Créer un diagramme de champ vectoriel
         plt.quiver(X, Y, E_x, E_y)
@@ -81,9 +88,10 @@ class World:
         # Afficher le diagramme
         plt.show()
 
+
 if __name__ == "__main__":
-    w = World(100,1,1)
-    w.add_part(Particle(50,50,100000000,0,0))
+    w = World(100, 1, 1)
+    w.add_part(Particle(50, 50, 100000000, 0, 0))
     w.calc_E()
     e = w.E_norm()
     w.visualize_E()
