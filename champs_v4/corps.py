@@ -21,8 +21,9 @@ class Particle:
             self.mass: float = const.charge_proton
 
     def calc_next(self, world_E, world_B, size, dt):
-        ex, ey, ez = world_E[int(self.x), int(self.y), int(self.z)]
-        bx, by, bz = world_B[int(self.x), int(self.y), int(self.z)]
+        print(f"worldE shape{world_E.shape},worldB shape {world_B.shape} ")
+        ex, ey, ez = world_E[int(self.x), int(self.y), int(self.z), :]
+        bx, by, bz = world_B[int(self.x), int(self.y), int(self.z), :]
         
         Fx = self.charge * (ex + bx * self.vx)
         Fy = self.charge * (ey + by * self.vy)

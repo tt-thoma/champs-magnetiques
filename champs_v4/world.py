@@ -12,10 +12,13 @@ class World:
         self.size: int = size
         self.dt: float = dt
         self.cell_size = cell_size
-        self.field_E = np.zeros((size // cell_size, size // cell_size, size // cell_size, 3), float)
-        self.field_B = np.zeros((size // cell_size, size // cell_size, size // cell_size, 3), float)
+        
+        size_int = int(size // cell_size)
+        self.field_E = np.zeros((size_int, size_int, size_int, 3), dtype=float)
+        self.field_B = np.zeros((size_int, size_int, size_int, 3), dtype=float)
+         
         self.particles: list[Particle] = []
-
+        self.temps = 0
        
 
     def add_part(self, part: Particle) -> None:
@@ -65,25 +68,23 @@ class World:
 
 
 
-
-
-
     def calc_B(self):
         print("Début du calcul du champ magnétique...")
+        
+        # Calcul de la différence finie pour la dérivée temporelle
+        dB_dt = np.diff(self.field_E, axis=-1) / self.dt
+        
+        # Remplir la première composante du champ magnétique en utilisant la première dérivée temporelle
+        self.field_B[..., 0] = -dB_dt[..., 0]
+        
+        # Remplir les deux autres composantes du champ magnétique en utilisant la méthode de la trapèze
+        # pour intégrer la dérivée temporelle sur le temps
+        self.field_B[..., 1:] = -integrate.cumtrapz(dB_dt, dx=self.dt, initial=0, axis=-1)
+    
+        print(f"Calcul du champ magnétique terminé.")
 
-        # Calcul de la dérivée spatiale du champ électrique (curl E)
-        curl_E = (
-            np.array(np.gradient(self.field_E))[np.array([1, 2, 0])]
-            - np.array(np.gradient(self.field_E))[np.array([2, 0, 1])]
-        )
 
-        # Intégration temporelle de dB/dt pour obtenir B
-        B = integrate.simps(curl_E, dx=self.dt, axis=-1)
-
-        # Assigner le champ magnétique calculé à self.field_B
-        self.field_B = B
-
-        print("Calcul du champ magnétique terminé.")
+    
     def plot_E_field(self):
         print("Début de la représentation du champ électrique sous forme de vecteurs...")
 
@@ -119,7 +120,7 @@ class World:
                 length=0.5, normalize=True, alpha=alpha.flatten(), color=plt.cm.viridis(colors / np.max(colors)))
 
         # Ajouter une barre de couleur
-        sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis, norm=plt.Normalize(vmin=0, vmax=np.max(colors)))
+        sm = plt.cm.ScalarMappable(cmap=plt.cm.coolwarm, norm=plt.Normalize(vmin=0, vmax=np.max(colors)))
         sm.set_array(colors)
         cbar = plt.colorbar(sm, ax=ax, pad=0.05)
         cbar.set_label('Norme du champ électrique')
@@ -143,6 +144,15 @@ class World:
         plt.show()
 
         print("Représentation du champ électrique sous forme de vecteurs terminée.")
+        
+    def calc_next(self):
+        self.calc_E()
+        self.calc_B()
+        for part in self.particles:
+            part.calc_next(self.field_E,self.field_B,self.size,self.dt)
+        self.temps += self.dt
+        
+        
     def plot_B_field(self):
         print("Début de la représentation du champ magnétique sous forme de vecteurs...")
 
@@ -162,12 +172,10 @@ class World:
         By = self.field_B[..., 1]
         Bz = self.field_B[..., 2]
 
-        # Créer une grille de coordonnées pour les vecteurs
-        x_coords, y_coords, z_coords = np.meshgrid(
-            np.arange(0, self.size, self.cell_size),
-            np.arange(0, self.size, self.cell_size),
-            np.arange(0, self.size, self.cell_size)
-        )
+        # Créer une grille de coordonnées pour les vecteurs du champ magnétique
+        shape = self.field_B.shape[:-1]  # Supprimer la dernière dimension (composantes du champ)
+        grid_size = [np.arange(0, s, self.cell_size) for s in shape]
+        x_coords, y_coords, z_coords = np.meshgrid(*grid_size, indexing='ij')
 
         # Calculer la couleur basée sur la norme du champ magnétique
         colors = norm_B.flatten()
@@ -178,7 +186,7 @@ class World:
                 length=0.5, normalize=True, alpha=alpha.flatten(), color=plt.cm.viridis(colors / np.max(colors)))
 
         # Ajouter une barre de couleur
-        sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis, norm=plt.Normalize(vmin=0, vmax=np.max(colors)))
+        sm = plt.cm.ScalarMappable(cmap=plt.cm.coolwarm, norm=plt.Normalize(vmin=0, vmax=np.max(colors)))
         sm.set_array(colors)
         cbar = plt.colorbar(sm, ax=ax, pad=0.05)
         cbar.set_label('Norme du champ magnétique')
@@ -203,14 +211,22 @@ class World:
 
         print("Représentation du champ magnétique sous forme de vecteurs terminée.")
 
-        
 
-w = World(10, 1, 1)
-w.add_part(Particle(3, 3, 3, 100000000, 0, 0))
-w.add_part(Particle(7, 7, 7, -100000000, 0, 0))
-print(w.field_E.shape)
-w.calc_E()
-w.calc_B()
-print(w.field_E.shape)
-#w.plot_E_field()
-w.plot_B_field()
+# Créer une instance de la classe World
+w = World(0.001, 0.00001, 0.0001)
+w.add_part(Particle(4, 4, 4, 10000, 0, 0))
+w.add_part(Particle(6, 6, 6, 10000, 0, 0))
+# Définir une durée totale de simulation
+duree_simulation = 1000  
+
+# Boucle de simulation
+while w.temps < duree_simulation:
+    # Calculer la prochaine étape de la simulation
+    w.calc_next()
+    print(f"position de la particule 0{w.particles[0].x, w.particles[0].y, w.particles[0].z}")
+    print(f"position de la particule 1{w.particles[1].x, w.particles[1].y, w.particles[1].z}")
+    # Afficher des informations sur la progression de la simulation
+    print(f"Temps écoulé : {w.temps} / {duree_simulation}")
+
+# Après la boucle, vous pouvez effectuer d'autres actions si nécessaire
+print("Simulation terminée !")
