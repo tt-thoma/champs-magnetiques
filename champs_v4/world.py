@@ -244,8 +244,8 @@ class World:
 
 # Créer une instance de la classe World
 w = World(10, 1, 0.1)
-w.add_part(Particle(4, 4, 4, 1, 0, 0))
-w.add_part(Particle(6, 6, 6, 1, 0, 0))
+w.add_part(Particle(4, 4, 4, const.charge_electron, 0, 0))
+w.add_part(Particle(6, 6, 6, const.charge_electron, 0, 0))
 # Définir une durée totale de simulation
 duree_simulation = 1
 
