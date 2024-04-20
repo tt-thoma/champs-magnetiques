@@ -21,18 +21,15 @@ class Particle:
             self.mass: float = const.charge_proton
 
     def calc_next(self, world_E, world_B, size, dt):
-        print("Calcul de la position")
+        
         ex, ey, ez = world_E[int(self.x), int(self.y), int(self.z), :]
         bx, by, bz = world_B[int(self.x), int(self.y), int(self.z), :]
-        print(f"{ex=}")
+        
         
         Fx = self.charge * (ex + bx * self.vx)
         Fy = self.charge * (ey + by * self.vy)
         Fz = self.charge * (ez + bz * self.vz)
-        print(f"{Fx=}")
-        print(f"{Fy=}")
-        print(f"{Fz=}")
-
+       
         ax = Fx / self.mass
         ay = Fy / self.mass
         az = Fz / self.mass
@@ -71,7 +68,7 @@ class Particle:
         new_x = self.x + (k1_x + 2 * k2_x + 2 * k3_x + k4_x) / 6
         new_y = self.y + (k1_y + 2 * k2_y + 2 * k3_y + k4_y) / 6
         new_z = self.z + (k1_z + 2 * k2_z + 2 * k3_z + k4_z) / 6
-        print(f"test    ---------- {new_x-self.x}")
+        
         if new_x <= 0 or new_x >= size:
             new_vx = -new_vx * 0.5
         else:

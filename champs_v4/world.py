@@ -7,7 +7,13 @@ from scipy.ndimage import convolve
 from scipy import integrate
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.colors import LinearSegmentedColormap
-
+import datetime
+import matplotlib.animation as animation
+import os
+import tqdm
+import sys
+import os
+import shutil
 
 class World:
     def __init__(self, size, cell_size, dt: float) -> None:
@@ -26,9 +32,7 @@ class World:
         self.particles.append(part)
 
     def calc_E(self):
-        print("Début du calcul du champ électrique engendré par chaque particule...")
-
-        # Obtenir la forme du champ électrique
+        # Début du calcul du champ électrique engendré par chaque particule...
         shape = self.field_E.shape
 
         # Créer une grille de coordonnées pour chaque point dans le monde
@@ -69,57 +73,37 @@ class World:
         # Assigner le champ électrique total calculé à self.field_E
         self.field_E = total_E
 
-        print("Calcul du champ électrique engendré par chaque particule terminé.")
-
     def calc_B(self):
-        print("Début du calcul du champ magnétique...")
-
-        # Calcul de la différence finie pour la dérivée temporelle
+        # Début du calcul du champ magnétique...
         dB_dt = np.diff(self.field_E, axis=-1) / self.dt
 
-        # Remplir la première composante du champ magnétique en utilisant la première dérivée temporelle
         self.field_B[..., 0] = -dB_dt[..., 0]
 
-        # Remplir les deux autres composantes du champ magnétique en utilisant la méthode de la trapèze
-        # pour intégrer la dérivée temporelle sur le temps
         self.field_B[..., 1:] = -integrate.cumtrapz(
             dB_dt, dx=self.dt, initial=0, axis=-1
         )
 
-        print(f"Calcul du champ magnétique terminé.")
-
     def plot_E_field(self):
-        print(
-            "Début de la représentation du champ électrique sous forme de vecteurs..."
-        )
-
-        # Calcul de la norme du champ électrique
+        # Début de la représentation du champ électrique sous forme de vecteurs...
         norm_E = np.linalg.norm(self.field_E, axis=-1)
-
-        # Calculer l'alpha en fonction de la norme, avec un minimum de 40%
         alpha = 0 + 0.6 * (1 - norm_E / np.max(norm_E))
 
-        # Créer une figure 3D avec un fond transparent
         fig = plt.figure()
         ax = fig.add_subplot(111, projection="3d")
-        fig.patch.set_facecolor("black")  # Définir le fond du graphique en noir
+        fig.patch.set_facecolor("black")  
 
-        # Extraire les composantes x, y et z du champ électrique
         Ex = self.field_E[..., 0]
         Ey = self.field_E[..., 1]
         Ez = self.field_E[..., 2]
 
-        # Créer une grille de coordonnées pour les vecteurs
         x_coords, y_coords, z_coords = np.meshgrid(
             np.arange(0, self.size, self.cell_size),
             np.arange(0, self.size, self.cell_size),
             np.arange(0, self.size, self.cell_size),
         )
 
-        # Calculer la couleur basée sur la norme du champ électrique
         colors = norm_E.flatten()
 
-        # Tracer les vecteurs du champ électrique avec couleur basée sur la norme et alpha ajusté
         ax.quiver(
             x_coords.flatten(),
             y_coords.flatten(),
@@ -133,7 +117,6 @@ class World:
             color=plt.cm.viridis(colors / np.max(colors)),
         )
 
-        # Ajouter une barre de couleur
         sm = plt.cm.ScalarMappable(
             cmap=plt.cm.coolwarm, norm=plt.Normalize(vmin=0, vmax=np.max(colors))
         )
@@ -141,25 +124,19 @@ class World:
         cbar = plt.colorbar(sm, ax=ax, pad=0.05)
         cbar.set_label("Norme du champ électrique")
 
-        # Étiqueter les axes
         ax.set_xlabel("X")
         ax.set_ylabel("Y")
         ax.set_zlabel("Z")
 
-        # Configurer la couleur du texte des axes
         ax.xaxis.label.set_color("white")
         ax.yaxis.label.set_color("white")
         ax.zaxis.label.set_color("white")
 
-        # Configurer la couleur des traits des axes
         ax.tick_params(axis="x", colors="white")
         ax.tick_params(axis="y", colors="white")
         ax.tick_params(axis="z", colors="white")
 
-        # Afficher la figure
         plt.show()
-
-        print("Représentation du champ électrique sous forme de vecteurs terminée.")
 
     def calc_next(self):
         self.calc_E()
@@ -169,37 +146,24 @@ class World:
         self.temps += self.dt
 
     def plot_B_field(self):
-        print(
-            "Début de la représentation du champ magnétique sous forme de vecteurs..."
-        )
-
-        # Calcul de la norme du champ magnétique
+        # Début de la représentation du champ magnétique sous forme de vecteurs...
         norm_B = np.linalg.norm(self.field_B, axis=-1)
-
-        # Calculer l'alpha en fonction de la norme, avec un minimum de 40%
         alpha = 0.4 + 0.6 * (1 - norm_B / np.max(norm_B))
 
-        # Créer une figure 3D avec un fond transparent
         fig = plt.figure()
         ax = fig.add_subplot(111, projection="3d")
-        fig.patch.set_facecolor("black")  # Définir le fond du graphique en noir
+        fig.patch.set_facecolor("black")  
 
-        # Extraire les composantes x, y et z du champ magnétique
         Bx = self.field_B[..., 0]
         By = self.field_B[..., 1]
         Bz = self.field_B[..., 2]
 
-        # Créer une grille de coordonnées pour les vecteurs du champ magnétique
-        shape = self.field_B.shape[
-            :-1
-        ]  # Supprimer la dernière dimension (composantes du champ)
+        shape = self.field_B.shape[:-1] 
         grid_size = [np.arange(0, s, self.cell_size) for s in shape]
         x_coords, y_coords, z_coords = np.meshgrid(*grid_size, indexing="ij")
 
-        # Calculer la couleur basée sur la norme du champ magnétique
         colors = norm_B.flatten()
 
-        # Tracer les vecteurs du champ magnétique avec couleur basée sur la norme et alpha ajusté
         ax.quiver(
             x_coords.flatten(),
             y_coords.flatten(),
@@ -213,7 +177,6 @@ class World:
             color=plt.cm.viridis(colors / np.max(colors)),
         )
 
-        # Ajouter une barre de couleur
         sm = plt.cm.ScalarMappable(
             cmap=plt.cm.coolwarm, norm=plt.Normalize(vmin=0, vmax=np.max(colors))
         )
@@ -221,46 +184,126 @@ class World:
         cbar = plt.colorbar(sm, ax=ax, pad=0.05)
         cbar.set_label("Norme du champ magnétique")
 
-        # Étiqueter les axes
         ax.set_xlabel("X")
         ax.set_ylabel("Y")
         ax.set_zlabel("Z")
 
-        # Configurer la couleur du texte des axes
         ax.xaxis.label.set_color("white")
         ax.yaxis.label.set_color("white")
         ax.zaxis.label.set_color("white")
 
-        # Configurer la couleur des traits des axes
         ax.tick_params(axis="x", colors="white")
         ax.tick_params(axis="y", colors="white")
         ax.tick_params(axis="z", colors="white")
 
-        # Afficher la figure
         plt.show()
 
-        print("Représentation du champ magnétique sous forme de vecteurs terminée.")
+    def create_animation(self, fps, total_simulation_time, total_animation_time, output_folder_name):
+        current_time = datetime.datetime.now()  
+        current_time_str = current_time.strftime("%Y-%m-%d_%H-%M-%S")  
+        filename = f"Simulation_{self.size}_{self.cell_size}_{self.dt}_{fps}fps_{current_time_str}.mp4"
+
+        output_folder = os.path.join(output_folder_name, f"Simulation_{self.size}_{self.cell_size}_{self.dt}_{fps}fps_{current_time_str}")
+
+        os.makedirs(output_folder, exist_ok=True)
+
+        animation_output_path = os.path.join(output_folder, filename)
+
+        console_output_path = os.path.join(output_folder, f"Simulation_{self.size}_{self.cell_size}_{self.dt}_{fps}fps_{current_time_str}_console.txt")
+
+        with open(console_output_path, "w") as console_file:
+            sys.stdout = console_file
+
+            print(f"Paramètres de simulation : size={self.size}, cell_size={self.cell_size}, dt={self.dt}")
+            print(f"FPS de l'animation : {fps}")
+            print(f"Durée totale de la simulation : {total_simulation_time} s")
+            print(f"Durée totale de l'animation : {total_animation_time} s")
+
+            sys.stdout = sys.__stdout__
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        def update(frame):
+            ax.clear()
+            ax.set_xlim(0, self.size)
+            ax.set_ylim(0, self.size)
+            ax.set_zlim(0, self.size)
+            ax.set_xlabel('X')
+            ax.set_ylabel('Y')
+            ax.set_zlabel('Z')
+            ax.set_title(f'Simulation - Temps écoulé: {frame / fps} s')
+
+            for part in self.particles:
+                ax.scatter(part.x, part.y, part.z, c='r', marker='o')
+
+            self.calc_next()  
+
+        total_animation_frames = int(total_animation_time * fps)  
+        fps_interval = 1000 / fps  
+
+        with tqdm.tqdm(total=total_animation_frames, desc="Calcul de l'animation", unit="frames") as progress_bar:
+            def update_with_progress(frame):
+                update(frame)
+                progress_bar.update(1)  
+
+            ani = animation.FuncAnimation(fig, update_with_progress, frames=total_animation_frames, interval=fps_interval)
+        
+            ani.save(animation_output_path, writer='ffmpeg', fps=fps)
+
+            print(f"L'animation a été enregistrée sous {animation_output_path}")
+            print(f"Les informations sont également enregistrées dans {console_output_path}")
 
 
 # Créer une instance de la classe World
-w = World(10, 1, 0.1)
-w.add_part(Particle(4, 4, 4, const.charge_electron, 0, 0))
-w.add_part(Particle(6, 6, 6, const.charge_electron, 0, 0))
-# Définir une durée totale de simulation
-duree_simulation = 1
+w = World(10,1, 0.0001)
+w.add_part(Particle(1, 5, 1,10000000*const.charge_electron, 0))
+w.add_part(Particle(1, 4, 2,10000000*const.charge_electron, 0))
+fps = 30  
+duree_simulation = 0.001
+duree_animation = 10
+clear = False
+def simulation(t=duree_simulation):
+    global w
+    while w.temps < duree_simulation:
+        w.calc_next()
 
-# Boucle de simulation
-while w.temps < duree_simulation:
-    # Calculer la prochaine étape de la simulation
-    w.calc_next()
-    print(
-        f"position de la particule 0 {w.particles[0].x, w.particles[0].y, w.particles[0].z}"
-    )
-    print(
-        f"position de la particule 1 {w.particles[1].x, w.particles[1].y, w.particles[1].z}"
-    )
-    # Afficher des informations sur la progression de la simulation
-    print(f"Temps écoulé : {w.temps} / {duree_simulation}")
+        """print(
+            f"position de la particule 1 {w.particles[1].x, w.particles[1].y, w.particles[1].z}"""
+        
+        print(f"Temps écoulé : {w.temps} / {duree_simulation}")
 
-# Après la boucle, vous pouvez effectuer d'autres actions si nécessaire
-print("Simulation terminée !")
+    print("Simulation terminée !")
+
+# Appeler la méthode create_animation avec les arguments spécifiés
+w.create_animation(fps, duree_simulation, duree_animation, output_folder_name="Résultats")
+
+
+def crf():
+    folder_path = "Résultats"
+    """
+    Clear all files and subfolders in the specified folder.
+
+    Args:
+        folder_path (str): Path to the folder to be cleared.
+    """
+    # Vérifie si le chemin est un dossier existant
+    if not os.path.isdir(folder_path):
+        print(f"Le chemin spécifié '{folder_path}' n'est pas un dossier existant.")
+        return
+
+    try:
+        # Parcourir tous les éléments (fichiers et sous-dossiers) dans le dossier
+        for item in os.listdir(folder_path):
+            item_path = os.path.join(folder_path, item)
+            # Si c'est un dossier, récursivement supprimer son contenu
+            if os.path.isdir(item_path):
+                shutil.rmtree(item_path)
+            # Si c'est un fichier, le supprimer
+            else:
+                os.remove(item_path)
+        print(f"Le dossier '{folder_path}' a été vidé avec succès.")
+    except Exception as e:
+        print(f"Erreur lors de la suppression du contenu du dossier '{folder_path}': {e}")
+if clear == True :
+    crf()
