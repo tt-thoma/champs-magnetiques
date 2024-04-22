@@ -256,13 +256,13 @@ class World:
 
 
 # Créer une instance de la classe World
-w = World(10,1, 0.0001)
-w.add_part(Particle(1, 5, 1,10000000*const.charge_electron, 0))
-w.add_part(Particle(1, 4, 2,10000000*const.charge_electron, 0))
+w = World(10,1, 0.001)
+w.add_part(Particle(5, 5, 1,-1000000*const.charge_electron, 0,0,0))
+w.add_part(Particle(6, 6, 2,1000000*const.charge_electron, 0,0,0))
 fps = 30  
-duree_simulation = 0.001
-duree_animation = 10
-clear = False
+duree_simulation = 0.1
+duree_animation = 11
+clear = True
 def simulation(t=duree_simulation):
     global w
     while w.temps < duree_simulation:
