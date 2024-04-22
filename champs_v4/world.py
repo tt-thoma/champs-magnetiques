@@ -15,6 +15,7 @@ import sys
 import os
 import shutil
 
+
 class World:
     def __init__(self, size, cell_size, dt: float) -> None:
         self.size: int = size
@@ -22,8 +23,8 @@ class World:
         self.cell_size = cell_size
 
         size_int = int(size // cell_size)
-        self.field_E = np.zeros((size_int, size_int, size_int, 3), dtype=float)
-        self.field_B = np.zeros((size_int, size_int, size_int, 3), dtype=float)
+        self.field_E = np.zeros((size_int, size_int, size_int, 3), dtype=np.float64)
+        self.field_B = np.zeros((size_int, size_int, size_int, 3), dtype=np.float64)
 
         self.particles: list[Particle] = []
         self.temps = 0
@@ -90,7 +91,7 @@ class World:
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection="3d")
-        fig.patch.set_facecolor("black")  
+        fig.patch.set_facecolor("black")
 
         Ex = self.field_E[..., 0]
         Ey = self.field_E[..., 1]
@@ -152,13 +153,13 @@ class World:
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection="3d")
-        fig.patch.set_facecolor("black")  
+        fig.patch.set_facecolor("black")
 
         Bx = self.field_B[..., 0]
         By = self.field_B[..., 1]
         Bz = self.field_B[..., 2]
 
-        shape = self.field_B.shape[:-1] 
+        shape = self.field_B.shape[:-1]
         grid_size = [np.arange(0, s, self.cell_size) for s in shape]
         x_coords, y_coords, z_coords = np.meshgrid(*grid_size, indexing="ij")
 
@@ -198,23 +199,33 @@ class World:
 
         plt.show()
 
-    def create_animation(self, fps, total_simulation_time, total_animation_time, output_folder_name):
-        current_time = datetime.datetime.now()  
-        current_time_str = current_time.strftime("%Y-%m-%d_%H-%M-%S")  
+    def create_animation(
+        self, fps, total_simulation_time, total_animation_time, output_folder_name
+    ):
+        current_time = datetime.datetime.now()
+        current_time_str = current_time.strftime("%Y-%m-%d_%H-%M-%S")
         filename = f"Simulation_{self.size}_{self.cell_size}_{self.dt}_{fps}fps_{current_time_str}.mp4"
 
-        output_folder = os.path.join(output_folder_name, f"Simulation_{self.size}_{self.cell_size}_{self.dt}_{fps}fps_{current_time_str}")
+        output_folder = os.path.join(
+            output_folder_name,
+            f"Simulation_{self.size}_{self.cell_size}_{self.dt}_{fps}fps_{current_time_str}",
+        )
 
         os.makedirs(output_folder, exist_ok=True)
 
         animation_output_path = os.path.join(output_folder, filename)
 
-        console_output_path = os.path.join(output_folder, f"Simulation_{self.size}_{self.cell_size}_{self.dt}_{fps}fps_{current_time_str}_console.txt")
+        console_output_path = os.path.join(
+            output_folder,
+            f"Simulation_{self.size}_{self.cell_size}_{self.dt}_{fps}fps_{current_time_str}_console.txt",
+        )
 
         with open(console_output_path, "w") as console_file:
             sys.stdout = console_file
 
-            print(f"Paramètres de simulation : size={self.size}, cell_size={self.cell_size}, dt={self.dt}")
+            print(
+                f"Paramètres de simulation : size={self.size}, cell_size={self.cell_size}, dt={self.dt}"
+            )
             print(f"FPS de l'animation : {fps}")
             print(f"Durée totale de la simulation : {total_simulation_time} s")
             print(f"Durée totale de l'animation : {total_animation_time} s")
@@ -222,47 +233,59 @@ class World:
             sys.stdout = sys.__stdout__
 
         fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
+        ax = fig.add_subplot(111, projection="3d")
 
         def update(frame):
             ax.clear()
             ax.set_xlim(0, self.size)
             ax.set_ylim(0, self.size)
             ax.set_zlim(0, self.size)
-            ax.set_xlabel('X')
-            ax.set_ylabel('Y')
-            ax.set_zlabel('Z')
-            ax.set_title(f'Simulation - Temps écoulé: {frame / fps} s')
+            ax.set_xlabel("X")
+            ax.set_ylabel("Y")
+            ax.set_zlabel("Z")
+            ax.set_title(f"Simulation - Temps écoulé: {frame / fps} s")
 
             for part in self.particles:
-                ax.scatter(part.x, part.y, part.z, c='r', marker='o')
+                ax.scatter(part.x, part.y, part.z, c="r", marker="o")
 
-            self.calc_next()  
+            self.calc_next()
 
-        total_animation_frames = int(total_animation_time * fps)  
-        fps_interval = 1000 / fps  
+        total_animation_frames = int(total_animation_time * fps)
+        fps_interval = 1000 / fps
 
-        with tqdm.tqdm(total=total_animation_frames, desc="Calcul de l'animation", unit="frames") as progress_bar:
+        with tqdm.tqdm(
+            total=total_animation_frames, desc="Calcul de l'animation", unit="frames"
+        ) as progress_bar:
+
             def update_with_progress(frame):
                 update(frame)
-                progress_bar.update(1)  
+                progress_bar.update(1)
 
-            ani = animation.FuncAnimation(fig, update_with_progress, frames=total_animation_frames, interval=fps_interval)
-        
-            ani.save(animation_output_path, writer='ffmpeg', fps=fps)
+            ani = animation.FuncAnimation(
+                fig,
+                update_with_progress,
+                frames=total_animation_frames,
+                interval=fps_interval,
+            )
+
+            ani.save(animation_output_path, writer="ffmpeg", fps=fps)
 
             print(f"L'animation a été enregistrée sous {animation_output_path}")
-            print(f"Les informations sont également enregistrées dans {console_output_path}")
+            print(
+                f"Les informations sont également enregistrées dans {console_output_path}"
+            )
 
-
+#--------------
 # Créer une instance de la classe World
-w = World(10,1, 0.001)
-w.add_part(Particle(5, 5, 1,-1000000*const.charge_electron, 0,0,0))
-w.add_part(Particle(6, 6, 2,1000000*const.charge_electron, 0,0,0))
-fps = 30  
-duree_simulation = 0.1
-duree_animation = 11
-clear = True
+w = World(0.1, 0.001, 0.000001) #Taille du monde , taille des cells , dt -(delta t)
+w.add_part(Particle(0.0_1, 0.005, 0.001, 1, -100000000 * const.charge_electron, 0, 0, 0)) #x , y ,z ; charge  
+w.add_part(Particle(0.006, 0.006, 0.002, 1, 100000000 * const.charge_electron, 0, 0, 0)) 
+fps = 30 
+duree_simulation = 0.00001
+duree_animation = 10
+clear = False
+#-----------------
+
 def simulation(t=duree_simulation):
     global w
     while w.temps < duree_simulation:
@@ -270,13 +293,16 @@ def simulation(t=duree_simulation):
 
         """print(
             f"position de la particule 1 {w.particles[1].x, w.particles[1].y, w.particles[1].z}"""
-        
+
         print(f"Temps écoulé : {w.temps} / {duree_simulation}")
 
     print("Simulation terminée !")
 
+
 # Appeler la méthode create_animation avec les arguments spécifiés
-w.create_animation(fps, duree_simulation, duree_animation, output_folder_name="Résultats")
+w.create_animation(
+    fps, duree_simulation, duree_animation, output_folder_name="Résultats"
+)
 
 
 def crf():
@@ -304,6 +330,10 @@ def crf():
                 os.remove(item_path)
         print(f"Le dossier '{folder_path}' a été vidé avec succès.")
     except Exception as e:
-        print(f"Erreur lors de la suppression du contenu du dossier '{folder_path}': {e}")
-if clear == True :
+        print(
+            f"Erreur lors de la suppression du contenu du dossier '{folder_path}': {e}"
+        )
+
+
+if clear == True:
     crf()

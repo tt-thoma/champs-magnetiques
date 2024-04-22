@@ -4,7 +4,7 @@ import numpy as np
 from math import sqrt
 
 class Particle:
-    def __init__(self, x: float, y: float, z: float, charge: float, vx: float = 0.0, vy: float = 0.0, vz: float = 0.0) -> None:
+    def __init__(self, x: float, y: float, z: float, charge: float, mass: float, vx: float = 0.0, vy: float = 0.0, vz: float = 0.0) -> None:
         self.x: float = x
         self.y: float = y
         self.z: float = z
@@ -14,26 +14,22 @@ class Particle:
         self.vz: float = vz
         
         self.charge: float = charge
+        self.mass = mass
         
-        if charge < 0:
-            self.mass: float = const.charge_electron
-        elif charge > 0:
-            self.mass: float = const.charge_proton
 
     def calc_next(self, world_E, world_B, size, dt):
-        
+        print(self.mass)
         ex, ey, ez = world_E[int(self.x), int(self.y), int(self.z), :]
         bx, by, bz = world_B[int(self.x), int(self.y), int(self.z), :]
         
-        
         Fx = self.charge * (ex + bx * self.vx)
-        Fy = self.charge * (ey + by * self.vy)
+        Fy = self.charge * (ey + by  * self.vy)
         Fz = self.charge * (ez + bz * self.vz)
-       
+        
         ax = Fx / self.mass
-        ay = Fy / self.mass
+        ay = Fy / self.mass 
         az = Fz / self.mass
-       
+        
         k1_vx = dt * ax
         k1_vy = dt * ay
         k1_vz = dt * az
