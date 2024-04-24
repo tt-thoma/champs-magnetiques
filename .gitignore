@@ -4,7 +4,7 @@ animation*.mp4
 donnees*.csv
 acceleration*.png
 vitesse*.png
-simulation_*.mp4
+Résultats/
 
 # Created by https://www.toptal.com/developers/gitignore/api/jupyternotebooks,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=jupyternotebooks,python

@@ -4,21 +4,22 @@ import numpy as np
 from math import sqrt
 
 class Particle:
-    def __init__(self, x: float, y: float, z: float, charge: float, mass: float, vx: float = 0.0, vy: float = 0.0, vz: float = 0.0) -> None:
-        self.x: float = x
-        self.y: float = y
-        self.z: float = z
+    def __init__(self, x: float,  y: float, z: float, charge: float, mass: float, vx: float = 0.0, vy: float = 0.0, vz: float = 0.0,dim: int = 0) -> None:
         
-        self.vx: float = vx
-        self.vy: float = vy
-        self.vz: float = vz
+        self.x: float = np.float64(x) * (10**dim)
+        self.y: float = np.float64(y) * (10**dim)
+        self.z: float = np.float64(z) * (10**dim)
         
-        self.charge: float = charge
-        self.mass = mass
+        self.vx: float = np.float64(vx) 
+        self.vy: float = np.float64(vy)
+        self.vz: float = np.float64(vz)
+        
+        self.charge: float = np.float64(charge)
+        self.mass = np.float64(mass)
         
 
     def calc_next(self, world_E, world_B, size, dt):
-        print(self.mass)
+        
         ex, ey, ez = world_E[int(self.x), int(self.y), int(self.z), :]
         bx, by, bz = world_B[int(self.x), int(self.y), int(self.z), :]
         
@@ -29,57 +30,64 @@ class Particle:
         ax = Fx / self.mass
         ay = Fy / self.mass 
         az = Fz / self.mass
+        print( f"fX = {Fx} ex = {ex}, bx {bx}, bx * self.vx {bx * self.vx}, self.vx = {self.vx} ax = {ax}")
+        # Vérifier si les valeurs sont NaN
+        if np.isnan(ax) or np.isnan(ay) or np.isnan(az):
+            print(F"Une des accélérations calculées est NaN. fX = {Fx}")
         
-        k1_vx = dt * ax
-        k1_vy = dt * ay
-        k1_vz = dt * az
-        k1_x = dt * self.vx
-        k1_y = dt * self.vy
-        k1_z = dt * self.vz
+        self.x = ax * dt
+        self.y = ay * dt  
+        self.z = az * dt
 
-        k2_vx = dt * (ax + 0.5 * k1_vx)
-        k2_vy = dt * (ay + 0.5 * k1_vy)
-        k2_vz = dt * (az + 0.5 * k1_vz)
-        k2_x = dt * (self.vx + 0.5 * k1_vx)
-        k2_y = dt * (self.vy + 0.5 * k1_vy)
-        k2_z = dt * (self.vz + 0.5 * k1_vz)
-
-        k3_vx = dt * (ax + 0.5 * k2_vx)
-        k3_vy = dt * (ay + 0.5 * k2_vy)
-        k3_vz = dt * (az + 0.5 * k2_vz)
-        k3_x = dt * (self.vx + 0.5 * k2_vx)
-        k3_y = dt * (self.vy + 0.5 * k2_vy)
-        k3_z = dt * (self.vz + 0.5 * k2_vz)
-
-        k4_vx = dt * (ax + k3_vx)
-        k4_vy = dt * (ay + k3_vy)
-        k4_vz = dt * (az + k3_vz)
-        k4_x = dt * (self.vx + k3_vx)
-        k4_y = dt * (self.vy + k3_vy)
-        k4_z = dt * (self.vz + k3_vz)
-
-        new_vx = self.vx + (k1_vx + 2 * k2_vx + 2 * k3_vx + k4_vx) / 6
-        new_vy = self.vy + (k1_vy + 2 * k2_vy + 2 * k3_vy + k4_vy) / 6
-        new_vz = self.vz + (k1_vz + 2 * k2_vz + 2 * k3_vz + k4_vz) / 6
-        new_x = self.x + (k1_x + 2 * k2_x + 2 * k3_x + k4_x) / 6
-        new_y = self.y + (k1_y + 2 * k2_y + 2 * k3_y + k4_y) / 6
-        new_z = self.z + (k1_z + 2 * k2_z + 2 * k3_z + k4_z) / 6
         
-        if new_x <= 0 or new_x >= size:
-            new_vx = -new_vx * 0.5
-        else:
-            self.x = new_x
+        """ # Étape 1: Calcul des coefficients RK4
+        k1x = self.charge * (ex + bx * self.vx) / self.mass
+        k1y = self.charge * (ey + by * self.vy) / self.mass
+        k1z = self.charge * (ez + bz * self.vz) / self.mass
+        
+        k2x = self.charge * (ex + bx * (self.vx + 0.5 * dt * k1x)) / self.mass
+        k2y = self.charge * (ey + by * (self.vy + 0.5 * dt * k1y)) / self.mass
+        k2z = self.charge * (ez + bz * (self.vz + 0.5 * dt * k1z)) / self.mass
+        
+        k3x = self.charge * (ex + bx * (self.vx + 0.5 * dt * k2x)) / self.mass
+        k3y = self.charge * (ey + by * (self.vy + 0.5 * dt * k2y)) / self.mass
+        k3z = self.charge * (ez + bz * (self.vz + 0.5 * dt * k2z)) / self.mass
+        
+        k4x = self.charge * (ex + bx * (self.vx + dt * k3x)) / self.mass
+        k4y = self.charge * (ey + by * (self.vy + dt * k3y)) / self.mass
+        k4z = self.charge * (ez + bz * (self.vz + dt * k3z)) / self.mass
+        
+        # Étape 2: Calcul des valeurs intermédiaires
+        vx_new = self.vx + (dt / 6.0) * (k1x + 2 * k2x + 2 * k3x + k4x)
+        vy_new = self.vy + (dt / 6.0) * (k1y + 2 * k2y + 2 * k3y + k4y)
+        vz_new = self.vz + (dt / 6.0) * (k1z + 2 * k2z + 2 * k3z + k4z)
+        
+        # Étape 3: Calcul final
+        self.x += dt * vx_new
+        self.y += dt * vy_new
+        self.z += dt * vz_new
+        """
 
-        if new_y <= 0 or new_y >= size:
-            new_vy = -new_vy * 0.5
-        else:
-            self.y = new_y
+        """
+        if np.isnan(vx_new) or np.isnan(vy_new) or np.isnan(vz_new):
+         print(f"Une des nouvelles vitesses calculées est NaN. Fx = {Fx}")
 
-        if new_z <= 0 or new_z >= size:
-            new_vz = -new_vz * 0.5
+        if self.x <= 0 or self.x >= size:
+            vx_new = -vx_new * 0.5
         else:
-            self.z = new_z
+            self.x += dt * vx_new
 
-        self.vx = new_vx
-        self.vy = new_vy
-        self.vz = new_vz
+        if self.y <= 0 or self.y >= size:
+            vy_new = -vy_new * 0.5
+        else:
+            self.y += dt * vy_new
+
+        if self.z <= 0 or self.z >= size:
+            vz_new = -vz_new * 0.5
+        else:
+            self.z += dt * vz_new
+
+        self.vx = vx_new
+        self.vy = vy_new
+        self.vz = vz_new
+            """

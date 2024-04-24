@@ -1,4 +1,0 @@
-Paramètres de simulation : size=0.1, cell_size=0.001, dt=1e-06
-FPS de l'animation : 30
-Durée totale de la simulation : 1e-05 s
-Durée totale de l'animation : 10 s
