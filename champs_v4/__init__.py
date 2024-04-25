@@ -1,3 +1,3 @@
 import world
-import particle
+import corps
 import constants

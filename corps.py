@@ -1,20 +1,4 @@
-import numpy as np
-
-from scipy.constants import epsilon_0, e, m_e, m_p
-from math import pi
-
-# Constante de Coulomb
-k = 1 / (4 * epsilon_0 * pi)
-# Charge d'un électron
-charge_electron = -e
-# Charge d'un proton
-charge_proton = e
-# Masse d'un électron
-masse_electron = m_e
-# Masse d'un proton
-masse_proton = m_p
-
-
+import constants as const
 import numpy as np
 
 from math import sqrt
@@ -38,7 +22,7 @@ class Particle:
         self.mass = np.float64(mass)
         
 
-    def calc_next(self, world_E, world_B, size, dt):
+    def calc_next(self, world_E, world_B, size, dt, w):
         ex, ey, ez = world_E[int(self.x), int(self.y), int(self.z), :]
         
         print(f"Coordonnées: {self.x=};{self.y=};{self.z=}")
@@ -119,91 +103,3 @@ class Particle:
         self.vy = vy_new
         self.vz = vz_new
           """    
-
-
-
-class World:
-
-    def __init__(self, size, cell_size, dt: float) -> None:
-        self.size: int = size
-        self.dt: float = dt
-        self.cell_size = cell_size
-
-        size_int = int(size // cell_size)
-        self.field_E = np.zeros((size_int, size_int, size_int, 3), dtype=np.float64)
-        self.field_B = np.zeros((size_int, size_int, size_int, 3), dtype=np.float64)
-
-        self.particles: list[Particle] = []
-        self.temps = 0
-
-    def add_part(self, part: Particle) -> None:
-        self.particles.append(part)
-
-    def calc_E(self):
-        shape = self.field_E.shape
-        x_coords, y_coords, z_coords = np.meshgrid(
-            np.arange(shape[0]), np.arange(shape[1]), np.arange(shape[2]), indexing="ij"
-        )
-
-        x_coords = x_coords * self.cell_size
-        y_coords = y_coords * self.cell_size
-        z_coords = z_coords * self.cell_size
-
-        total_E = np.zeros_like(self.field_E)
-
-        for part in self.particles:
-            vec_pos = np.stack(
-                (x_coords - part.x, y_coords - part.y, z_coords - part.z), axis=-1
-            )
-            #print(f"vec pos = {vec_pos}")
-            distance = np.linalg.norm(vec_pos, axis=-1)
-            distance = np.where(distance == 0, 1e-9, distance)
-            E_norm = (
-                k * part.charge / (distance**2).astype(np.float64)
-            )
-            print(f"{E_norm=}")
-              # Calcul de la magnitude du champ électrique
-            E_vec = (
-                E_norm[..., np.newaxis] * vec_pos / distance[..., np.newaxis]
-            )  # Calcul du vecteur champ électrique normalisé
-            print(f"{E_vec=}")
-            total_E += E_vec
-
-        self.field_E = total_E
-        if np.isnan(self.field_E).any():
-            print(f"Le champ électrique contient des valeurs NaN après le calcul.")
-            nan_indices = np.argwhere(np.isnan(self.field_E))
-            print("Indices des valeurs NaN dans le champ électrique :", nan_indices)
-    def calc_next(self):
-        self.calc_E()
-        
-        
-        for part in self.particles:
-            # Vérifier si les coordonnées de la particule restent dans les limites du monde simulé
-            if (
-                0 <= part.x < self.size
-                and 0 <= part.y < self.size
-                and 0 <= part.z < self.size
-            ):
-                # Si les coordonnées sont valides, calculer la prochaine position de la particule
-                part.calc_next(self.field_E, self.field_B, self.size, self.dt)
-            else:
-                # Si les coordonnées sont invalides, ignorer la mise à jour de la particule
-                print(
-                    f"Attention : Les coordonnées de la particule sont hors des limites du monde simulé,  x = {part.x} / y = {part.y} / z = {part.z}."
-                )
-        self.temps += self.dt
-
-w = World(2,1,1)
-w.add_part(Particle(0,0,0,charge_electron,masse_electron,ax = 0.001))
-
-print(w.particles[0].y)
-
-for i in range(2):
-    print(f'-----------------------------{i+1}---------------------')
-    
-    w.calc_next()
-    
-    print(w.field_E[0,0,0])
-    print(w.particles[0].y)
-    
