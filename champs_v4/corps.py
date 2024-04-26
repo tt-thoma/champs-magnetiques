@@ -1,6 +1,6 @@
 import constants as const
 import numpy as np
-
+from utils import print_debug
 from math import sqrt
 
 
@@ -36,18 +36,17 @@ class Particle:
         self.charge: np.float64 = np.float64(charge)
         self.mass = np.float64(mass)
 
-    def calc_next(self, world_E, world_B, size, dt, w):
-        w = 1
-        ex, ey, ez = world_E[int(self.x*w), int(self.y*w), int(self.z*w), :]
-        """
-        print(f"Coordonnées: {self.x=}; {self.y=}; {self.z=}")
-        print(f"CoordonnéesD: {int(self.x)=}; {int(self.y)=}; {int(self.z)=}")
-        print(f"Multiplicateur: {1}")"""
+    def calc_next(self, world_E, world_B, size, dt, c):
+        ex, ey, ez = world_E[int(self.x/c), int(self.y/c), int(self.z/c), :]
+        
+        print_debug(f"Coordonnées: {self.x=}; {self.y=}; {self.z=}")
+        print_debug(f"CoordonnéesD: {int(self.x/c)=}; {int(self.y/c)=}; {int(self.z/c)=}")
+        print_debug(f"Multiplicateur: {c}")
 
-        # print(f"Champ_e: {ex=}; {ey=}; {ez=}")
-        bx, by, bz = world_B[int(self.x*w), int(self.y*w), int(self.z*w), :]
+        #print_debug(f"Champ_e: {ex=}; {ey=}; {ez=}")
+        bx, by, bz = world_B[int(self.x/c), int(self.y/c), int(self.z/c), :]
 
-        # print(f"Champ_b: {bx=}; {by=}; {bz=}")
+        #print_debug(f"Champ_b: {bx=}; {by=}; {bz=}")
 
         Fx = self.charge * (ex + bx * self.vx)
         Fy = self.charge * (ey + by * self.vy)
@@ -56,10 +55,10 @@ class Particle:
         self.ax += Fx / self.mass
         self.ay += Fy / self.mass
         self.az += Fz / self.mass
-        # print( f"fX = {Fx} ex = {ex}, bx {bx}, bx * self.vx {bx * self.vx}, self.vx = {self.vx} ax = {self.ax}")
+        print_debug( f"fX = {Fx} ex = {ex}, bx {bx}, bx * self.vx {bx * self.vx}, self.vx = {self.vx} ax = {self.ax}")
         # Vérifier si les valeurs sont NaN
         if np.isnan(self.ax) or np.isnan(self.ay) or np.isnan(self.az):
-            print(f"Une des accélérations calculées est NaN. {Fx=}")
+            print_debug(f"Une des accélérations calculées est NaN. {Fx=}")
 
         # Étape 1: Calcul des coefficients RK4
         k1x = self.charge * (ex + bx * self.vx) / self.mass
@@ -82,38 +81,42 @@ class Particle:
         vx_new = self.vx + (dt / 6.0) * (k1x + 2 * k2x + 2 * k3x + k4x)
         vy_new = self.vy + (dt / 6.0) * (k1y + 2 * k2y + 2 * k3y + k4y)
         vz_new = self.vz + (dt / 6.0) * (k1z + 2 * k2z + 2 * k3z + k4z)
-
+        print_debug(f"{vx_new=}")
         # Étape 3: Calcul final
         self.x += dt * vx_new
         self.y += dt * vy_new
         self.z += dt * vz_new
+        
+
 
         if np.isnan(vx_new) or np.isnan(vy_new) or np.isnan(vz_new):
-            print(f"Une des nouvelles vitesses calculées est NaN. Fx = {Fx}")
+            print_debug(f"Une des nouvelles vitesses calculées est NaN. Fx = {Fx}")
 
         if self.x <= 0:
             self.x = np.float64(0)
             vx_new = vx_new * -0.5
-        elif self.x >= size-1:
-            self.x = np.float64(size-1)
+        elif self.x >= size-c:
+            self.x = np.float64(size-c)
             vx_new = vx_new * -0.5
 
         if self.y <= 0:
             self.y = np.float64(0)
             vy_new = vy_new * -0.5
-        elif self.y >= size-1:
-            self.y = np.float64(size-1)
+        elif self.y >= size-c:
+            self.y = np.float64(size-c)
             vy_new = vy_new * -0.5
 
         if self.z <= 0:
             self.z = np.float64(0)
             vz_new = vz_new * -0.5
-        elif self.z >= size-1:
-            self.z = np.float64(size-1)
+        elif self.z >= size-c:
+            self.z = np.float64(size-c)
             vz_new = vz_new * -0.5
         
         self.vx = vx_new
         self.vy = vy_new
         self.vz = vz_new
-        
+        print_debug(f"Coordonnées: {self.x=}; {self.y=}; {self.z=}")
+        print_debug(f"CoordonnéesD: {int(self.x/c)=}; {int(self.y/c)=}; {int(self.z/c)=}")
+        print_debug(f"Multiplicateur: {c}")
 

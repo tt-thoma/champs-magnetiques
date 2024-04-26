@@ -10,6 +10,7 @@ import datetime
 from mpl_toolkits.mplot3d import Axes3D
 from scipy import integrate
 import logging
+from utils import print_debug
 
 from corps import Particle
 
@@ -44,7 +45,7 @@ class World:
         
 
         for part in self.particles:
-            px, py, pz = int(part.x), int(part.y), int(part.z)
+            px, py, pz = int(part.x/self.cell_size), int(part.y/self.cell_size), int(part.z/self.cell_size)
             
             vec_pos = np.stack(
                 (x_coords - part.x, y_coords - part.y, z_coords - part.z), axis=-1
@@ -67,7 +68,7 @@ class World:
             
         self.field_E = total_E
         if np.isnan(self.field_E).any():
-            print(f"Le champ électrique contient des valeurs NaN après le calcul.")
+            print_debug(f"Le champ électrique contient des valeurs NaN après le calcul.")
 
     def calc_B(self):
         dB_dt = np.diff(self.field_E, axis=-1) / self.dt
@@ -79,7 +80,7 @@ class World:
             np.isnan(self.field_B), np.nanmin(self.field_B), self.field_B
         )
 
-    def calc_next(self, w):
+    def calc_next(self):
         for part in self.particles:
             # Vérifier si les coordonnées de la particule restent dans les limites du monde simulé
             if (
@@ -88,10 +89,10 @@ class World:
                 and 0 <= part.z < self.size
             ):
                 # Si les coordonnées sont valides, calculer la prochaine position de la particule
-                part.calc_next(self.field_E, self.field_B, self.size, self.dt, w)
+                part.calc_next(self.field_E, self.field_B, self.size, self.dt, self.cell_size)
             else:
                 # Si les coordonnées sont invalides, ignorer la mise à jour de la particule
-                print(
+                print_debug(
                     f"Attention : Les coordonnées de la particule sont hors des limites du monde simulé,  x = {part.x} / y = {part.y} / z = {part.z}."
                 )
         self.temps += self.dt
@@ -104,15 +105,18 @@ class World:
 
     def create_animation(
         self,
-        
         total_simulation_time,
         total_animation_time,
         animation_type,
         output_folder_name,
+        cell_size_reduction,
+        v,
+        r,
+        particule_visualisation,
     ):
         current_time = datetime.datetime.now()
         current_time_str = current_time.strftime("%Y-%m-%d_%H-%M-%S")
-        filename = f"Simulation_{self.size}_{self.cell_size}_{self.dt}_fps_{current_time_str}"
+        filename = f"Simulation_{self.size}_{self.cell_size}_{self.dt}_fps_{current_time_str}.mp4"
 
         output_folder = os.path.join(
             output_folder_name,
@@ -129,46 +133,50 @@ class World:
 
         with open(console_output_path, "w") as console_file:
             sys.stdout = console_file
-            print(
+            print_debug(
                 f"Paramètres de simulation : size={self.size}, cell_size={self.cell_size}, dt={self.dt}"
             )
-            print(f"Nombre de particules : {len(self.particles)}")
-            print("Paramètres initiaux des particules :")
+            print_debug(f"Nombre de particules : {len(self.particles)}")
+            print_debug("Paramètres initiaux des particules :")
             for i, part in enumerate(self.particles):
-                print(
+                print_debug(
                     f"Particule {i+1}: x={part.x}, y={part.y}, z={part.z}, charge={part.charge}, masse={part.mass}"
                 )
-            print(f"Type d'animation : {animation_type}")
+            print_debug(f"Type d'animation : {animation_type}")
             
-            print(f"Durée totale de la simulation : {total_simulation_time} s")
-            print(f"Durée totale de l'animation : {total_animation_time} s")
-            print()
+            print_debug(f"Durée totale de la simulation : {total_simulation_time} s")
+            print_debug(f"Durée totale de l'animation : {total_animation_time} s")
+            print_debug()
             sys.stdout = sys.__stdout__
         fig = plt.figure()
         ax = fig.add_subplot(111, projection="3d")
-
+        #ax.view_init(azim=r, elev=v)
         simulation_time = 0  # Initialisation du temps de simulation
 
         def update():
             nonlocal simulation_time  # Utilisation de la variable simulation_time déclarée en dehors de la fonction
 
             ax.clear()
-            ax.set_xlim(0, self.size)
-            ax.set_ylim(0, self.size)
-            ax.set_zlim(0, self.size)
+            ax.set_xlim(0, self.size-1/self.cell_size)
+            ax.set_ylim(0, self.size-1/self.cell_size)
+            ax.set_zlim(0, self.size-1/self.cell_size)
             ax.set_xlabel("X")
             ax.set_ylabel("Y")
             ax.set_zlabel("Z")
+            
             ax.set_title(
                 f"Simulation - Temps écoulé (simulation): {w.temps} s"
             )
 
             if animation_type == "P":
                 self.plot_particle_positions(ax)
-            elif animation_type in ["E", "B", "TOTAL"]:
-                self.plot_fields(ax, field_type=animation_type)
-
-            self.calc_next(w)
+            elif animation_type in ["E", "B", "T"]:
+                self.plot_fields(ax, field_type=animation_type, cell_size_reduction = cell_size_reduction)
+            
+            if particule_visualisation == True and animation_type in ["E", "B", "T"]:
+                self.plot_fields(ax, field_type=animation_type, cell_size_reduction = cell_size_reduction)
+                self.plot_particle_positions(ax)
+            self.calc_next()
             simulation_time += self.dt # Incrémentation du temps de simulation à chaque trame
 
         # fps = nombre de frame / temps 
@@ -195,59 +203,63 @@ class World:
 
             ani.save(animation_output_path, writer="ffmpeg") #, fps=fps)
 
-            print(f"L'animation a été enregistrée sous {animation_output_path}")
-            print(
+            print_debug(f"L'animation a été enregistrée sous {animation_output_path}")
+            print_debug(
                 f"Les informations sont également enregistrées dans {console_output_path}"
             )
-            print(f"{total_animation_time=}")
-            print("#######", animation_simulation_interval)
+            print_debug(f"{total_animation_time=}")
+            print_debug("#######", animation_simulation_interval)
 
     def plot_particle_positions(self, ax):
         for part in self.particles:
             ax.scatter(part.x, part.y, part.z, c="r", marker="o")
-
-    def plot_fields(self, ax, field_type, window_size=1):
+    def plot_fields(self, ax, field_type, cell_size_reduction):
         if field_type == "E":
             field = self.field_E
             field_label = "Champ électrique"
         elif field_type == "B":
             field = self.field_B
             field_label = "Champ magnétique"
-        elif field_type == "TOTAL":
+        elif field_type == "T":
             field = self.field_E + self.field_B
             field_label = "Champ total (E + B)"
         else:
             raise ValueError("Type de champ non valide. Utilisez 'E', 'B' ou 'TOTAL'.")
 
         shape = field.shape[:-1]
-        grid_size = [np.arange(0, s, self.cell_size) for s in shape]
 
-        x_coords, y_coords, z_coords = np.meshgrid(*grid_size, indexing="ij")
+        grid_size = np.arange(0, shape[0] * self.cell_size, self.cell_size)
+        x_coords, y_coords, z_coords = np.meshgrid(grid_size, grid_size, grid_size, indexing="ij")
 
-        for i in range(shape[0]):
-            for j in range(shape[1]):
-                for k in range(shape[2]):
-                    i_min = max(0, i - window_size)
-                    i_max = min(shape[0], i + window_size + 1)
-                    j_min = max(0, j - window_size)
-                    j_max = min(shape[1], j + window_size + 1)
-                    k_min = max(0, k - window_size)
-                    k_max = min(shape[2], k + window_size + 1)
+        # Réduire la taille de la grille
+        reduced_shape = (shape[0] // cell_size_reduction, shape[1] // cell_size_reduction, shape[2] // cell_size_reduction)
+        x_coords_reduced = x_coords[::cell_size_reduction, ::cell_size_reduction, ::cell_size_reduction]
+        y_coords_reduced = y_coords[::cell_size_reduction, ::cell_size_reduction, ::cell_size_reduction]
+        z_coords_reduced = z_coords[::cell_size_reduction, ::cell_size_reduction, ::cell_size_reduction]
 
-                    window_field = field[i_min:i_max, j_min:j_max, k_min:k_max]
-                    avg_field = np.mean(window_field, axis=(0, 1, 2))
+        # Moyenne des vecteurs de champ dans les cellules
+        averaged_field = np.mean(field.reshape((reduced_shape[0], cell_size_reduction, reduced_shape[1], cell_size_reduction, reduced_shape[2], cell_size_reduction, 3)), axis=(1, 3, 5))
 
-                    ax.quiver(
-                        x_coords[i, j, k],
-                        y_coords[i, j, k],
-                        z_coords[i, j, k],
-                        avg_field[0],
-                        avg_field[1],
-                        avg_field[2],
-                        length=0.5,
-                        normalize=True,
-                        color="b",
-                    )
+        # Calcul de la norme du champ moyenné
+        norm_values = np.linalg.norm(averaged_field, axis=3)
+        norm = plt.Normalize(vmin=norm_values.min(), vmax=norm_values.max())
+        norm_values_normalized = norm(norm_values)
+        colors = plt.cm.RdBu(1 - norm_values_normalized.ravel())
+        
+        alphas = 0.5 + 0.5 * norm_values_normalized.ravel()
+
+        ax.quiver(
+            x_coords_reduced,
+            y_coords_reduced,
+            z_coords_reduced,
+            averaged_field[..., 0],
+            averaged_field[..., 1],
+            averaged_field[..., 2],
+            length=(1/self.cell_size)*cell_size_reduction,
+            normalize=True,
+            colors=colors,
+            alpha=alphas
+        )
 
         ax.set_xlabel("X")
         ax.set_ylabel("Y")
@@ -261,14 +273,33 @@ class World:
         ax.tick_params(axis="y", colors="white")
         ax.tick_params(axis="z", colors="white")
 
+        ax.set_facecolor('black')
 
-duree_simulation = 10
-duree_animation = 6
-clear = True
-dt = 0.005 #s
+        ax.grid(color='white')
+"""
+        if not hasattr(self, 'colorbar_created'):
+            sm = plt.cm.ScalarMappable(cmap=plt.cm.RdBu, norm=plt.Normalize(vmin=norm_values.min(), vmax=norm_values.max()))
+            sm.set_array([])
+            self.colorbar = plt.colorbar(sm, ax=ax, label='Norme du champ', pad=0.05)  # Ajustez le pad selon vos besoins
+            self.colorbar_created = True"""
+        
+#----Temps-----
+dt = 0.01 #s    
+duree_simulation = 1
+duree_animation = 10
+#---boul------
+clear = False
+simulation = True
+#----taille----
 taille_du_monde = 10 # m
 taille_des_cellules = 1 # m
+cell_size_reduction = 1 #cell
+#pdv axe degres
+r = 45
+v = 45
 
+type_aniamtion = "E"
+particule_visualisation = True
 # fps = 30
 
 
@@ -276,14 +307,15 @@ taille_des_cellules = 1 # m
 
 # Créer une instance de la classe World
 w = World(taille_du_monde, taille_des_cellules, dt)  # Taille du monde, taille des cells, dt -(delta t)
-w.add_part(Particle(3, 3, 3,  1* const.charge_electron, 1 * const.masse_electron,dim = 0))
-w.add_part(Particle(2, 2, 2, 1 * -const.charge_electron, 1 * const.masse_electron,dim = 0))
+w.add_part(Particle(4, 5 ,5,  1* const.charge_electron, 1 * const.masse_electron,dim =0 ))
+w.add_part(Particle(4 ,3,4, -1* const.charge_electron, 1 * const.masse_electron,dim = 0))
+
 
 
 def crf():
     folder_path = "Résultats"
     if not os.path.isdir(folder_path):
-        print(f"Le chemin spécifié '{folder_path}' n'est pas un dossier existant.")
+        print_debug(f"Le chemin spécifié '{folder_path}' n'est pas un dossier existant.")
         return
 
     try:
@@ -293,21 +325,25 @@ def crf():
                 shutil.rmtree(item_path)
             else:
                 os.remove(item_path)
-        print(f"Le dossier '{folder_path}' a été vidé avec succès.")
+        print_debug(f"Le dossier '{folder_path}' a été vidé avec succès.")
     except Exception as e:
-        print(
+        print_debug(
             f"Erreur lors de la suppression du contenu du dossier '{folder_path}': {e}"
         )
 
 
 if clear == True:
     crf()
-
-# Appeler la méthode create_animation avec les arguments spécifiés
-w.create_animation(
-    
-    duree_simulation,
-    duree_animation,
-    output_folder_name="Résultats",
-    animation_type="P",
-)
+if simulation:
+    w.create_animation(
+        
+        duree_simulation,
+        duree_animation,
+        output_folder_name="Résultats",
+        animation_type= type_aniamtion,
+        cell_size_reduction= cell_size_reduction,
+        r = r,
+        v = v,
+        particule_visualisation = particule_visualisation,
+        
+    )
