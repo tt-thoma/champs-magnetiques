@@ -471,8 +471,8 @@ class World:
             self.colorbar_created = True"""
         
 #----Temps-----
-dt = 1e-6 #s    
-duree_simulation = 1e-5 #s
+dt = 1e-7 #s    
+duree_simulation = 1e-6 #s
 duree_animation = 10 #s
 
 #---bool------
@@ -483,7 +483,7 @@ type_simulation = "fil" #"fil" , "R" , ""
 
 #----taille----
 taille_du_monde = 1 # m
-taille_des_cellules = 0.01 # m
+taille_des_cellules =0.01 # m
 cell_size_reduction = 1 #cell
 dimension = 0 # int
 
@@ -492,8 +492,8 @@ nombres_de_particules = 2 #int
 
 #fill
 axe = 'x'
-position_x = 50-1 # cell
-position_y = 50-1 # cell
+position_x = 4-1 # cell
+position_y = 4-1 # cell
 I = 1 #A
 U = 1 #V
 densité = 10
@@ -501,11 +501,11 @@ densité = 10
 #animation
 type_aniamtion = "B" # "P", "E" ,"B" ,"T"
 particule_visualisation = True
-min_alpha = 0.5 # 0 - 1
-max_alpha = 0.5# 0 - 1
+min_alpha = 0.3 # 0 - 1
+max_alpha = 0.7# 0 - 1
 #pdv axe degres
-r = 0 # 0 - 180 degrès
-v = 10 # 0 - 180 degrès
+r = 45 # 0 - 180 degrès
+v = 45 # 0 - 180 degrès
 
 
 
@@ -514,7 +514,7 @@ v = 10 # 0 - 180 degrès
 # Créer une instance de la classe World
 w = World(taille_du_monde, taille_des_cellules, dt)  # Taille du monde, taille des cells, dt -(delta t)
 
-"""w.add_part(Particle(1 ,1,1, -1* const.charge_electron, 1 * const.masse_electron,dim = dimension))"""
+#w.add_part(Particle(1.5 ,1,1, -1* const.charge_electron, 1 * const.masse_electron,dim = dimension))
 
 #w.add_part(Particle(4,4,4,1,1))
     

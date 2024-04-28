@@ -41,6 +41,12 @@ class Particle:
         if self.fil == False:
             ex, ey, ez = world_E[int(self.x/c), int(self.y/c), int(self.z/c), :]
             bx, by, bz = world_B[int(self.x/c), int(self.y/c), int(self.z/c), :]
+            if self.vx >0.001:
+                vx = 0.001
+            if self.vy >0.001:
+                vy = 0.001
+            if self.vz >0.001:
+                vz = 0.001    
         elif self.fil == True:
             ex, ey, ez = fil[int(self.x/c), int(self.y/c), int(self.z/c), :]
             bx, by, bz = 0,0,0 
@@ -88,14 +94,13 @@ class Particle:
         vy_new = self.vy + (dt / 6.0) * (k1y + 2 * k2y + 2 * k3y + k4y)
         vz_new = self.vz + (dt / 6.0) * (k1z + 2 * k2z + 2 * k3z + k4z)
         print_debug(f"{vx_new=}")
+        
         # Étape 3: Calcul final
         self.x += dt * vx_new
         self.y += dt * vy_new
         self.z += dt * vz_new
-        
-        print_debug(f"          Coordonnées: {self.x=}; {self.y=}; {self.z=}")
-        print_debug(f"       CoordonnéesD: {int(self.x/c)=}; {int(self.y/c)=}; {int(self.z/c)=}")
-        print_debug(f"           Multiplicateur: {c}")
+
+
 
         if np.isnan(vx_new) or np.isnan(vy_new) or np.isnan(vz_new):
             print_debug(f"Une des nouvelles vitesses calculées est NaN. Fx = {Fx}")
@@ -128,3 +133,8 @@ class Particle:
         print_debug(f"CoordonnéesD: {int(self.x/c)=}; {int(self.y/c)=}; {int(self.z/c)=}")
         print_debug(f"Multiplicateur: {c}")
 
+        
+        
+        print_debug(f"          Coordonnées: {self.x=}; {self.y=}; {self.z=}")
+        print_debug(f"       CoordonnéesD: {int(self.x/c)=}; {int(self.y/c)=}; {int(self.z/c)=}")
+        print_debug(f"           Multiplicateur: {c}")
