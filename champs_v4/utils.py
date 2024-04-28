@@ -2,8 +2,12 @@
 
 debug = True
 
+
+
 def print_debug(*args):
     global debug
     if not debug:
         return
-    print(args)
+    for i in args:
+        print("-", i, end="")
+    print()
