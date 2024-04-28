@@ -41,15 +41,16 @@ class Particle:
         if self.fil == False:
             ex, ey, ez = world_E[int(self.x/c), int(self.y/c), int(self.z/c), :]
             bx, by, bz = world_B[int(self.x/c), int(self.y/c), int(self.z/c), :]
+            
+        elif self.fil == True:
+            ex, ey, ez = fil[int(self.x/c), int(self.y/c), int(self.z/c), :]
+            bx, by, bz = 0,0,0 
             if self.vx >0.001:
                 vx = 0.001
             if self.vy >0.001:
                 vy = 0.001
             if self.vz >0.001:
                 vz = 0.001    
-        elif self.fil == True:
-            ex, ey, ez = fil[int(self.x/c), int(self.y/c), int(self.z/c), :]
-            bx, by, bz = 0,0,0 
             
         print_debug(f"Coordonnées: {self.x=}; {self.y=}; {self.z=}")
         print_debug(f"CoordonnéesD: {int(self.x/c)=}; {int(self.y/c)=}; {int(self.z/c)=}")

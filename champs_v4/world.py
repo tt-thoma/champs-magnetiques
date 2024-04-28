@@ -18,7 +18,7 @@ import time
 from scipy.fft import fftn, ifftn
 
 class World:
-    def __init__(self, size, cell_size, dt: float) -> None:
+    def __init__(self, size, cell_size, dt: float,I , U) -> None:
         self.size: int = size
         self.dt: float = dt
         self.cell_size = cell_size
@@ -30,14 +30,22 @@ class World:
         self.field_B = np.zeros((size_int, size_int, size_int, 3), dtype=np.float64)
         
         self.particles: list[Particle] = []
-        
+    
         self.temps = 0
+        
+        self.U= U   
+        self.I = I
+        
+        
+        
+        
 
     def add_part(self, part: Particle) -> None:
         self.particles.append(part)
 
-    def add_fil(self,axe,position_x, position_y,norm_E,d:int):
-        global I , duree_simulation
+    def add_fil(self,axe,position_x, position_y,d:int):
+        norm_E = (self.I**2)/(self.U*const.epsilon_0)
+        global  duree_simulation
         n_p = d*int(self.size/self.cell_size)
         q = (I * duree_simulation)/n_p
         masse = ((q)/const.charge_electron)*const.masse_electron
@@ -231,6 +239,30 @@ class World:
 
         return rotationnel_E
     
+    
+    def ca(self):
+        global U, I , f
+        
+        fe = f/(dt/f)
+        self.U = U*np.sin(2*np.pi*fe)
+        self.I = I*np.sin(2*np.pi*fe)
+        norm_E =(self.I**2)/(self.U*const.epsilon_0)
+    
+        if axe == 'x':
+            self.field_E_fil[:,position_x,position_y,0]  = norm_E
+               
+        elif axe == 'y':
+            self.field_E_fil[:,position_x,position_y,0]  = norm_E
+            
+        elif axe == 'z':
+            self.field_E_fil[:,position_x,position_y,0]  = norm_E
+            
+    
+    
+    
+    
+    
+    
     def calc_B(self):
         rotationnel_E = self.calculate_rotationnel_E_fft()
         # Méthode de Runge-Kutta d'ordre 4 (RK4) pour l'intégration temporelle
@@ -245,7 +277,8 @@ class World:
 
 
     def calc_next(self):
-        
+        if type_de_courant == "ca":
+            self.ca()
         for part in self.particles:
             
             # Vérifier si les coordonnées de la particule restent dans les limites du monde simulé
@@ -255,7 +288,7 @@ class World:
                 and 0 <= part.z < self.size
             ):
                 # Si les coordonnées sont valides, calculer la prochaine position de la particule
-                part.calc_next(self.field_E, self.field_B, self.size, self.dt, self.cell_size,fil = self.field_E_fil)
+                part.calc_next(self.field_E, self.field_B, self.size, self.dt, self.cell_size, fil = self.field_E_fil)
             else:
                 # Si les coordonnées sont invalides, ignorer la mise à jour de la particule
                 print_debug(
@@ -452,8 +485,12 @@ class World:
             length=(1/self.size*self.cell_size)*cell_size_reduction,
             normalize=True,
             colors=colors,
-            alpha=alphas
+            alpha=alphas,
+            capstyle='round',
+            pivot='middle',
+            
         )
+        
         ax.xaxis.label.set_color("white")
         ax.yaxis.label.set_color("white")
         ax.zaxis.label.set_color("white")
@@ -462,8 +499,12 @@ class World:
         ax.tick_params(axis="y", colors="white")
         ax.tick_params(axis="z", colors="white")
     
+
+
         
-"""
+
+        """
+
         if not hasattr(self, 'colorbar_created'):
             sm = plt.cm.ScalarMappable(cmap=plt.cm.RdBu, norm=plt.Normalize(vmin=norm_values.min(), vmax=norm_values.max()))
             sm.set_array([])
@@ -471,8 +512,8 @@ class World:
             self.colorbar_created = True"""
         
 #----Temps-----
-dt = 1e-7 #s    
-duree_simulation = 1e-5 #s
+dt = 1e-2 #s    
+duree_simulation = 1e-1 #s
 duree_animation = 10 #s
 
 #---bool------
@@ -488,7 +529,7 @@ cell_size_reduction = 1 #cell
 dimension = 0 # int
 
 # random
-nombres_de_particules = 2 #int
+nombres_de_particules = 2 #int 
 
 #fill
 axe = 'x'
@@ -496,7 +537,10 @@ position_x = 4-1 # cell
 position_y = 4-1 # cell
 I = 1 #A
 U = 1 #V
-densité = 100
+densité = 5
+
+type_de_courant = "ca" # "cc" "ca"
+f = 50 #hz
 
 #animation
 type_aniamtion = "B" # "P", "E" ,"B" ,"T"
@@ -504,15 +548,15 @@ particule_visualisation = True
 min_alpha = 0.0005 # 0 - 1
 max_alpha = 0.7# 0 - 1
 #pdv axe 
-r = 45 # 0 - 180 degrès
-v = 45 # 0 - 180 degrès
+r = 0 # 0 - 180 degrès r = 0 --> axe y r = 90 ---> axe x
+v = 15 # 0 - 180 degrès
 
 
 
 
 
 # Créer une instance de la classe World
-w = World(taille_du_monde, taille_des_cellules, dt)  # Taille du monde, taille des cells, dt -(delta t)
+w = World(taille_du_monde, taille_des_cellules, dt,U = U,I = I)  # Taille du monde, taille des cells, dt -(delta t)
 
 #w.add_part(Particle(1.5 ,1,1, -1* const.charge_electron, 1 * const.masse_electron,dim = dimension))
 
@@ -556,8 +600,9 @@ if type_simulation == "R":
     print("R")
     p_random(nombres_de_particules)
 elif type_simulation == "fil":
-    E_norm = (I**2)/(U*const.epsilon_0)
-    w.add_fil(axe,position_x,position_y,E_norm,densité) 
+        
+        w.add_fil(axe,position_x,position_y,densité) 
+    
 
 
 if min_alpha + max_alpha > 1:
