@@ -10,7 +10,7 @@ import datetime
 from mpl_toolkits.mplot3d import Axes3D
 from scipy import integrate
 import logging
-from utils import print_debug
+from utils import print_debug, debug
 import random as rd
 from corps import Particle
 from concurrent.futures import ThreadPoolExecutor
@@ -472,18 +472,18 @@ class World:
         
 #----Temps-----
 dt = 1e-7 #s    
-duree_simulation = 1e-6 #s
+duree_simulation = 1e-5 #s
 duree_animation = 10 #s
 
 #---bool------
-clear = True
+clear = False
 simulation = True
 debug = False
 type_simulation = "fil" #"fil" , "R" , ""
 
 #----taille----
 taille_du_monde = 1 # m
-taille_des_cellules =0.01 # m
+taille_des_cellules =0.1 # m
 cell_size_reduction = 1 #cell
 dimension = 0 # int
 
@@ -496,14 +496,14 @@ position_x = 4-1 # cell
 position_y = 4-1 # cell
 I = 1 #A
 U = 1 #V
-densité = 10
+densité = 100
 
 #animation
 type_aniamtion = "B" # "P", "E" ,"B" ,"T"
 particule_visualisation = True
-min_alpha = 0.3 # 0 - 1
+min_alpha = 0.0005 # 0 - 1
 max_alpha = 0.7# 0 - 1
-#pdv axe degres
+#pdv axe 
 r = 45 # 0 - 180 degrès
 v = 45 # 0 - 180 degrès
 

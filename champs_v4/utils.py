@@ -1,6 +1,6 @@
 # -*- encoding: utf-8 -*-
 
-debug = False
+debug = None
 
 def print_debug(*args):
     global debug

@@ -135,6 +135,3 @@ class Particle:
 
         
         
-        print_debug(f"          Coordonnées: {self.x=}; {self.y=}; {self.z=}")
-        print_debug(f"       CoordonnéesD: {int(self.x/c)=}; {int(self.y/c)=}; {int(self.z/c)=}")
-        print_debug(f"           Multiplicateur: {c}")
