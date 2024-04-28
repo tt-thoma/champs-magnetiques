@@ -43,15 +43,7 @@ class Particle:
         if not self.fil:
             ex, ey, ez = world_E[int(self.x / c), int(self.y / c), int(self.z / c), :]
             bx, by, bz = world_B[int(self.x / c), int(self.y / c), int(self.z / c), :]
-
         else:
-            if self.vx > 0.001:
-                self.vx = np.float64(0.001)
-            if self.vy > 0.001:
-                self.vy = np.float64(0.001)
-            if self.vz > 0.001:
-                self.vz = np.float64(0.001)
-
             ex, ey, ez = fil[int(self.x / c), int(self.y / c), int(self.z / c), :]
             bx, by, bz = 0, 0, 0
 
@@ -72,9 +64,7 @@ class Particle:
         self.ax += Fx / self.mass
         self.ay += Fy / self.mass
         self.az += Fz / self.mass
-        print_debug(
-            f"fX = {Fx} ex = {ex}, bx {bx}, bx * self.vx {bx * self.vx}, self.vx = {self.vx} ax = {self.ax}"
-        )
+
         # Vérifier si les valeurs sont NaN
         if np.isnan(self.ax) or np.isnan(self.ay) or np.isnan(self.az):
             print_debug(f"Une des accélérations calculées est NaN. {Fx=}")
@@ -134,6 +124,19 @@ class Particle:
         self.vx = vx_new
         self.vy = vy_new
         self.vz = vz_new
+
+        if self.fil:
+            if self.vx > 0.001:
+                self.vx = np.float64(0.001)
+            if self.vy > 0.001:
+                self.vy = np.float64(0.001)
+            if self.vz > 0.001:
+                self.vz = np.float64(0.001)
+
+        print_debug(
+            f"fX = {Fx} ex = {ex}, bx {bx}, bx * self.vx {bx * self.vx}, self.vx = {self.vx} ax = {self.ax}"
+        )
+
         print_debug(f"Coordonnées: {self.x=}; {self.y=}; {self.z=}")
         print_debug(
             f"CoordonnéesD: {int(self.x/c)=}; {int(self.y/c)=}; {int(self.z/c)=}"

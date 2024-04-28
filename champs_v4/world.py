@@ -534,9 +534,9 @@ class World:
             self.colorbar_created = True"""
 
 # ----Temps-----
-dt = 1e-7  # s
-duree_simulation = 1e-5  # s
-duree_animation = 20  # s
+dt = 0.0001  # s
+duree_simulation = 0.05  # s
+duree_animation = 10  # s
 
 # ---bool------
 clear = False
