@@ -1,4 +1,4 @@
-from scipy.constants import epsilon_0, e, m_e, m_p
+from scipy.constants import epsilon_0, e, m_e, m_p,mu_0
 from math import pi
 
 # Constante de Coulomb
@@ -11,3 +11,8 @@ charge_proton = e
 masse_electron = m_e
 # Masse d'un proton
 masse_proton = m_p
+
+print(masse_electron)
+#permittuvité du vide 
+epsilon_0 = epsilon_0
+mu_0 = mu_0
