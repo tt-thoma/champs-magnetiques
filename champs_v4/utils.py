@@ -1,6 +1,7 @@
 # -*- encoding: utf-8 -*-
-
-debug = True
+import numpy as np
+import matplotlib.colors as mcolors
+debug = False
 
 
 
@@ -11,3 +12,6 @@ def print_debug(*args):
     for i in args:
         print("-", i, end="")
     print()
+    
+    
+    

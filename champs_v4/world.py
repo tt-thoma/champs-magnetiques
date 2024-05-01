@@ -1,3 +1,4 @@
+import pygame
 import numpy as np
 import constants as const
 import matplotlib.pyplot as plt
@@ -10,12 +11,14 @@ import datetime
 from mpl_toolkits.mplot3d import Axes3D
 from scipy import integrate
 import logging
-from utils import print_debug, debug
+from utils import print_debug, debug 
 import random as rd
 from corps import Particle
 from concurrent.futures import ThreadPoolExecutor
 import time
 from scipy.fft import fftn, ifftn
+import threading
+import discord
 
 
 class World:
@@ -32,7 +35,7 @@ class World:
 
         self.particles: list[Particle] = []
     
-
+        self.temps = 0
         
         self.U= U   
         self.I = I
@@ -262,11 +265,14 @@ class World:
     def ca(self):
         global U, I , f
         
-        fe = f/(dt/f)
-        self.U = U*np.sin(2*np.pi*fe)
-        self.I = I*np.sin(2*np.pi*fe)
-        norm_E =(self.I**2)/(self.U*const.epsilon_0)
-    
+        self.U = U*np.sin(2*np.pi*f*self.temps)
+        self.I = I*np.sin(2*np.pi*f*self.temps)
+        if self.U != 0:
+            norm_E =(self.I**2)/(self.U*const.epsilon_0)
+        else:
+            norm_E = 0
+        print(f"{norm_E=}")
+        print(f"{self.U=}")
         if axe == 'x':
             self.field_E_fil[:,position_x,position_y,0]  = norm_E
                
@@ -280,6 +286,7 @@ class World:
     
     def calc_B(self):
         rotationnel_E = self.calculate_rotationnel_E_fft()
+        
         # Méthode de Runge-Kutta d'ordre 4 (RK4) pour l'intégration temporelle
         k1 = -const.mu_0 * rotationnel_E
         k2 = -const.mu_0 * (rotationnel_E + 0.5 * self.dt * k1)
@@ -461,161 +468,194 @@ class World:
             print_debug("#######", animation_simulation_interval)
 
     def plot_particle_positions(self, ax):
-        for part in self.particles:
-            if part.fil == True:
-                color = "w"
-            else:
-                color = "r"
+            for part in self.particles:
+                if part.fil == True:
+                    color = "w"
+                else:
+                    color = "r"
 
-            ax.scatter(part.x, part.y, part.z, c=color, marker="o")
+                ax.scatter(part.x, part.y, part.z, c=color, marker="o")
 
     def plot_fields(
-        self,
-        ax,
-        field_type,
-        cell_size_reduction,
-        min_alpha,
-        max_alpha,
-    ):
+            self,
+            ax,
+            field_type,
+            cell_size_reduction,
+            min_alpha,
+            max_alpha,
+        ):
 
-        if field_type == "E":
-            field = self.field_E
-            field_label = "Champ électrique"
-        elif field_type == "B":
-            field = self.field_B
-            field_label = "Champ magnétique"
-        elif field_type == "T":
-            field = self.field_E + self.field_B
-            field_label = "Champ total (E + B)"
-        else:
-            raise ValueError("Type de champ non valide. Utilisez 'E', 'B' ou 'TOTAL'.")
+            if field_type == "E":
+                field = self.field_E
+                field_label = "Champ électrique"
+            elif field_type == "B":
+                field = self.field_B
+                field_label = "Champ magnétique"
+            elif field_type == "T":
+                field = self.field_E + self.field_B
+                field_label = "Champ total (E + B)"
+            else:
+                raise ValueError("Type de champ non valide. Utilisez 'E', 'B' ou 'TOTAL'.")
 
-        shape = field.shape[:-1]
+            shape = field.shape[:-1]
 
-        grid_size = np.arange(0, shape[0] * self.cell_size, self.cell_size)
-        x_coords, y_coords, z_coords = np.meshgrid(
-            grid_size, grid_size, grid_size, indexing="ij"
-        )
+            grid_size = np.arange(0, shape[0] * self.cell_size, self.cell_size)
+            x_coords, y_coords, z_coords = np.meshgrid(
+                grid_size, grid_size, grid_size, indexing="ij"
+            )
 
-        # Réduire la taille de la grille
-        reduced_shape = (
-            shape[0] // cell_size_reduction,
-            shape[1] // cell_size_reduction,
-            shape[2] // cell_size_reduction,
-        )
-        x_coords_reduced = x_coords[
-            ::cell_size_reduction, ::cell_size_reduction, ::cell_size_reduction
-        ]
-        y_coords_reduced = y_coords[
-            ::cell_size_reduction, ::cell_size_reduction, ::cell_size_reduction
-        ]
-        z_coords_reduced = z_coords[
-            ::cell_size_reduction, ::cell_size_reduction, ::cell_size_reduction
-        ]
+            # Réduire la taille de la grille
+            reduced_shape = (
+                shape[0] // cell_size_reduction,
+                shape[1] // cell_size_reduction,
+                shape[2] // cell_size_reduction,
+            )
+            x_coords_reduced = x_coords[
+                ::cell_size_reduction, ::cell_size_reduction, ::cell_size_reduction
+            ]
+            y_coords_reduced = y_coords[
+                ::cell_size_reduction, ::cell_size_reduction, ::cell_size_reduction
+            ]
+            z_coords_reduced = z_coords[
+                ::cell_size_reduction, ::cell_size_reduction, ::cell_size_reduction
+            ]
 
-        # Moyenne des vecteurs de champ dans les cellules
-        averaged_field = np.mean(
-            field.reshape(
-                (
-                    reduced_shape[0],
-                    cell_size_reduction,
-                    reduced_shape[1],
-                    cell_size_reduction,
-                    reduced_shape[2],
-                    cell_size_reduction,
-                    3,
-                )
-            ),
-            axis=(1, 3, 5),
-        )
+            # Moyenne des vecteurs de champ dans les cellules
+            averaged_field = np.mean(
+                field.reshape(
+                    (
+                        reduced_shape[0],
+                        cell_size_reduction,
+                        reduced_shape[1],
+                        cell_size_reduction,
+                        reduced_shape[2],
+                        cell_size_reduction,
+                        3,
+                    )
+                ),
+                axis=(1, 3, 5),
+            )
 
-        # Calcul de la norme du champ moyenné
-        norm_values = np.linalg.norm(averaged_field, axis=3)
-        norm = plt.Normalize(vmin=norm_values.min(), vmax=norm_values.max())
-        norm_values_normalized = norm(norm_values)
-        colors = plt.cm.RdBu(1 - norm_values_normalized.ravel())
+            # Calcul de la norme du champ moyenné
+            norm_values = np.linalg.norm(averaged_field, axis=3)
+            norm = plt.Normalize(vmin=norm_values.min(), vmax=norm_values.max())
+            norm_values_normalized = norm(norm_values)
+            colors = plt.cm.inferno(1 - norm_values_normalized.ravel())
+            
+            alphas = min_alpha + max_alpha * norm_values_normalized.ravel()
+            
+            if axe == "x" and type_simulation == "fil":
+                angles = np.arctan2(averaged_field[..., 2], averaged_field[..., 0])
+                angles_degrees = np.degrees(angles)
+                
+                angles_normalized = (angles_degrees + 180) / 360  # Normalisation entre 0 et 1
+                
+                # Utiliser les angles normalisés pour déterminer la couleur de chaque vecteur
+                colors = plt.cm.RdYlBu(angles_normalized.ravel())
+                
+            elif axe == "y" and type_simulation == "fil":
+                angles = np.arctan2(averaged_field[..., 2], averaged_field[..., 1])
+                angles_degrees = np.degrees(angles)
+                
+                angles_normalized = (angles_degrees + 180) / 360  # Normalisation entre 0 et 1
+                
+                # Utiliser les angles normalisés pour déterminer la couleur de chaque vecteur
+                colors = plt.cm.RdYlBu(angles_normalized.ravel())
+                
+            elif axe == "z" and type_simulation == "fil":
+                angles = np.arctan2(averaged_field[..., 1], averaged_field[..., 0])
+                angles_degrees = np.degrees(angles)
+                
+                angles_normalized = (angles_degrees + 180) / 360  # Normalisation entre 0 et 1
+                
+                # Utiliser les angles normalisés pour déterminer la couleur de chaque vecteur
+                colors = plt.cm.RdYlBu(angles_normalized.ravel())
+            
+            
+            ax.quiver(
+                x_coords_reduced,
+                y_coords_reduced,
+                z_coords_reduced,
+                averaged_field[..., 0],
+                averaged_field[..., 1],
+                averaged_field[..., 2],
+                length=(0.1 / self.size * self.cell_size) * cell_size_reduction,
+                normalize=True,
+                colors=colors,
+                alpha=alphas,
+                capstyle='butt',
+                arrow_length_ratio=10,
+                
+            )
+            
+            
+            
+            
+            ax.xaxis.label.set_color("white")
+            ax.yaxis.label.set_color("white")
+            ax.zaxis.label.set_color("white")
 
-        alphas = min_alpha + max_alpha * norm_values_normalized.ravel()
+            ax.tick_params(axis="x", colors="white")
+            ax.tick_params(axis="y", colors="white")
+            ax.tick_params(axis="z", colors="white")
 
-        ax.quiver(
-            x_coords_reduced,
-            y_coords_reduced,
-            z_coords_reduced,
-            averaged_field[..., 0],
-            averaged_field[..., 1],
-            averaged_field[..., 2],
-            length=(1 / self.size * self.cell_size) * cell_size_reduction,
-            normalize=True,
-            colors=colors,
-            alpha=alphas,
-            capstyle='round',
-            pivot='middle',
-        )
+
+    """     
+        plt.show()
         
-        ax.xaxis.label.set_color("white")
-        ax.yaxis.label.set_color("white")
-        ax.zaxis.label.set_color("white")
-
-        ax.tick_params(axis="x", colors="white")
-        ax.tick_params(axis="y", colors="white")
-        ax.tick_params(axis="z", colors="white")
-
-        """
         if not hasattr(self, 'colorbar_created'):
             sm = plt.cm.ScalarMappable(cmap=plt.cm.RdBu, norm=plt.Normalize(vmin=norm_values.min(), vmax=norm_values.max()))
             sm.set_array([])
             self.colorbar = plt.colorbar(sm, ax=ax, label='Norme du champ', pad=0.05)  # Ajustez le pad selon vos besoins
             self.colorbar_created = True"""
         
-#----Temps-----
-dt = 1e-2 #s    
-duree_simulation = 1e-1 #s
-duree_animation = 10 #s
+
 
 
 # ----Temps-----
-dt = 0.0001  # s
-duree_simulation = 0.05  # s
+dt = 1e-7  # s
+duree_simulation = 1e-6  # s
 duree_animation = 10  # s
 
 # ---bool------
-clear = False
+clear = True
 simulation = True
-debug = True
+debug = False
 type_simulation = "fil"  # "fil" , "R" , ""
 
 # ----taille----
 taille_du_monde = 1  # m
-taille_des_cellules = 0.1  # m
-cell_size_reduction = 1  # cell
+taille_des_cellules = 0.01  # m
+cell_size_reduction = 10 # cell
 dimension = 0  # int
 
 # random
-nombres_de_particules = 2 #int 
+nombres_de_particules = 1 #int 
 
 #fill
 axe = 'x'
-position_x = 4-1 # cell
-position_y = 4-1 # cell
-I = 1 #A
-U = 1 #V
-densité = 5
+position_x = 50-1 # cell
+position_y = 50-1 # cell
+I = 40 #A
+U = 240 #V
+densité = 10
 
-type_de_courant = "ca" # "cc" "ca"
+type_de_courant = "cc" # "cc" "ca"
 f = 50 #hz
 
 # animation
 type_aniamtion = "B"  # "P", "E" ,"B" ,"T"
 particule_visualisation = True
 
-min_alpha = 0.0005 # 0 - 1
-max_alpha = 0.7# 0 - 1
+min_alpha = 0.1 # 0 - 1
+max_alpha = 0.4# 0 - 1
 #pdv axe 
 r = 0 # 0 - 180 degrès r = 0 --> axe y r = 90 ---> axe x
-v = 15 # 0 - 180 degrès
+v = 9 # 0 - 180 degrès
 
 # Créer une instance de la classe World
 w = World(taille_du_monde, taille_des_cellules, dt,U = U,I = I)  # Taille du monde, taille des cells, dt -(delta t)
+"""w.calc_E()"""
 
 
 
@@ -677,3 +717,68 @@ if simulation:
         min_alpha=min_alpha,
         max_alpha=max_alpha,
     )
+
+import time
+import discord
+from discord.ext import commands
+import pygame
+import asyncio
+import keyboard
+
+# Fonction pour initialiser pygame
+def init_pygame():
+    pygame.mixer.init()
+
+# Fonction pour jouer un son
+def play_sound():
+    print("Son joué")  # Pour le suivi dans la console, peut être retiré dans la version finale
+    # Chemin vers le fichier audio à jouer
+    sound_file_path = "simple-notification-152054.mp3"
+    # Charger le son
+    sound = pygame.mixer.Sound(sound_file_path)
+    # Jouer le son
+    sound.play()
+
+# Fonction pour envoyer un message Discord via un bot
+async def send_discord_message():
+    intents = discord.Intents.default()  # Définir les intentions du bot
+    bot = commands.Bot(command_prefix='!', intents=intents)  # Préfixe du bot Discord
+    channel_id = 1234933548331307090  # Remplacez YOUR_CHANNEL_ID par l'ID de votre canal Discord
+
+    @bot.event
+    async def on_ready():
+        channel = bot.get_channel(channel_id)
+        await channel.send("simulation terminé")
+
+    await bot.start('MTIzNDkzMTkxNTU5Mzg3NTQ4Ng.GCaX5l.y7SNN0CE9ydcH6gyc-z6g7N5R1KXlZQ1b07Vxo')  # Remplacez YOUR_BOT_TOKEN par le token de votre bot Discord
+
+# Fonction pour arrêter le programme en appuyant sur une touche
+def stop_program():
+    print("Appuyez sur la touche 'Esc' pour arrêter le programme.")
+    while True:
+        if keyboard.is_pressed('esc'):  # Si la touche 'esc' est pressée
+            print("Programme arrêté")
+            pygame.mixer.quit()  # Arrêter le lecteur audio
+            break
+
+# Fonction principale
+def main():
+    init_pygame()  # Initialiser pygame une fois
+    asyncio.run(send_discord_message())
+    while True:
+        current_hour = time.localtime().tm_hour
+        
+        if current_hour >= 7 and current_hour < 23:
+            play_sound()
+            # Appel de la fonction pour envoyer un message Discord
+            # Note : ceci est asynchrone, donc le programme continuera à s'exécuter pendant que le message est envoyé
+            
+
+        if keyboard.is_pressed('f12'):
+            break
+
+        time.sleep(3600)  # Attendre 1 heure avant de vérifier à nouveau l'heure
+
+# Démarrer le programme
+if __name__ == "__main__":
+    main()
