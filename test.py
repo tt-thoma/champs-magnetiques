@@ -36,8 +36,9 @@ class Particle:
         
         self.charge: np.float64 = np.float64(charge)
         self.mass = np.float64(mass)
+        self.U = 10
+        self.I = 10
         
-
     def calc_next(self, world_E, world_B, size, dt):
         ex, ey, ez = world_E[int(self.x), int(self.y), int(self.z), :]
         
@@ -194,16 +195,18 @@ class World:
                 )
         self.temps += self.dt
 
-w = World(2,1,1)
-w.add_part(Particle(0,0,0,charge_electron,masse_electron,ax = 0.001))
+    def solenoide(self,centre_x,centre_y,centre_z,longueur,axe,rayon,densité_de_spires,nombre_total):
+        norm_E = (self.I**2)/(self.U*epsilon_0)
+        nombre_de_spire = densité_de_spires*longueur
+        for p in range(nombre_total):
+            n = (np.pi*2) / nombre_de_spire 
+            x = centre_x + rayon*np.cos(n*p)
+            y = centre_y + rayon*np.sin(n*p)
+            z = centre_z
+            self.add_part(x,y,z,1,1)
+           
+        
+    
+w = World(10,1,1)
 
-print(w.particles[0].y)
 
-for i in range(2):
-    print(f'-----------------------------{i+1}---------------------')
-    
-    w.calc_next()
-    
-    print(w.field_E[0,0,0])
-    print(w.particles[0].y)
-    

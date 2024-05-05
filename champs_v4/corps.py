@@ -20,6 +20,8 @@ class Particle:
         az=0.0,
         dim: int = 0,
         fil: bool = False,
+        solen: bool = False,
+        
     ) -> None:
 
         self.x: np.float64 = np.float64(x) * (10**dim)
@@ -37,7 +39,7 @@ class Particle:
         self.charge: np.float64 = np.float64(charge)
         self.mass = np.float64(mass)
         self.fil = fil
-
+        self.solen = solen
     def calc_next(self, world_E, world_B, size, dt, c, fil):
 
         if not self.fil:
@@ -47,6 +49,9 @@ class Particle:
             ex, ey, ez = fil[int(self.x / c), int(self.y / c), int(self.z / c), :]
             bx, by, bz = 0, 0, 0
 
+        
+        
+        
         print_debug(f"Coordonnées: {self.x=}; {self.y=}; {self.z=}")
         print_debug(
             f"CoordonnéesD: {int(self.x/c)=}; {int(self.y/c)=}; {int(self.z/c)=}"

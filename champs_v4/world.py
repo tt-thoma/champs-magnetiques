@@ -72,13 +72,16 @@ class World:
                 z = position_y * self.cell_size
                 self.add_part(Particle(x, y, z, const.charge_electron, masse, fil=True))
         elif axe == "z":
-            self.field_E_fil[:, position_x, position_y, 0] = norm_E
+            self.field_E[:, position_x, position_y, 0] = norm_E
             for i in range(n_p):
                 x = position_x * self.cell_size
                 y = position_y * self.cell_size
                 z = i * self.cell_size
                 self.add_part(Particle(x, y, z, const.charge_electron, masse, fil=True))
 
+
+    
+    
     def calc_E2(self) -> None:
 
         shape = self.field_E.shape
@@ -308,16 +311,38 @@ class World:
                 and 0 <= part.z < self.size
             ):
                 # Si les coordonnées sont valides, calculer la prochaine position de la particule
-
-                part.calc_next(
-                    self.field_E,
-                    self.field_B,
-                    self.size,
-                    self.dt,
-                    self.cell_size,
-                    fil=self.field_E_fil,
-                )
-                
+                if not part.solen:
+                    
+                    part.calc_next(
+                        self.field_E,
+                        self.field_B,
+                        self.size,
+                        self.dt,
+                        self.cell_size,
+                        fil=self.field_E_fil,
+                    )
+                else:
+                    liste_position = self.particles.index(part)+1
+                    if  liste_position < len(self.particles):
+                        next_part = self.particles[liste_position]
+                        X = next_part.x-part.x
+                        Y = next_part.y-part.y
+                        Z = next_part.z-part.z
+                        norm = np.sqrt((X)**2 +(Y)**2 +(Z)**2            )
+                        direction_x = X/norm
+                        direction_y = Y/norm
+                        direction_z = Z/norm
+                        part.x += (direction_x * part.vx)*self.dt
+                        part.y += (direction_y * part.vy)*self.dt
+                        part.z += (direction_z * part.vz)*self.dt
+                    else:
+                        next_part = self.particles[0]
+                        part.x =next_part.x
+                        part.y = next_part.y
+                        part.z = next_part.z
+                    
+                  
+                    
             else:
                 # Si les coordonnées sont invalides, ignorer la mise à jour de la particule
                 print_debug(
@@ -475,7 +500,43 @@ class World:
                     color = "r"
 
                 ax.scatter(part.x, part.y, part.z, c=color, marker="o")
+    def solenoide(self,centre_x,centre_y,centre_z,longueur,axe,rayon,densité_de_spires,nombre_total):
+        norm_E = (self.I**2)/(self.U*const.epsilon_0)
+       
+        nombre_de_spire = densité_de_spires*longueur
+        if axe == "x":
+            for p in range(nombre_total):
+                n = ((np.pi*nombre_de_spire) / nombre_total)
+                z = centre_x + rayon*np.cos(n*p)
+                y = centre_y + rayon*np.sin(n*p)
+                x = centre_z + (p/nombre_total ) * longueur
+                self.add_part(Particle(x,y,z,const.charge_electron,const.masse_electron,fil = True,solen =True))
 
+    
+        elif axe == 'y':
+            for p in range(nombre_total):
+                n = ((np.pi*nombre_de_spire) / nombre_total)
+                x = centre_x + rayon*np.cos(n*p)
+                z = centre_y + rayon*np.sin(n*p)
+                y = centre_z + (p/nombre_total ) * longueur
+                self.add_part(Particle(x,y,z,const.charge_electron,const.masse_electron,fil = True,solen =True))
+
+    
+        else:
+            for p in range(nombre_total):
+                n = ((np.pi*nombre_de_spire) / nombre_total)
+                x = centre_x + rayon*np.cos(n*p)
+                y = centre_y + rayon*np.sin(n*p)
+                z = centre_z + (p/nombre_total ) * longueur
+                
+                self.add_part(Particle(x,y,z,const.charge_electron,const.masse_electron,fil = True ,solen =True))
+
+            
+        
+    
+    
+    
+    
     def plot_fields(
             self,
             ax,
@@ -496,9 +557,9 @@ class World:
                 field_label = "Champ total (E + B)"
             else:
                 raise ValueError("Type de champ non valide. Utilisez 'E', 'B' ou 'TOTAL'.")
-
+           
             shape = field.shape[:-1]
-
+            
             grid_size = np.arange(0, shape[0] * self.cell_size, self.cell_size)
             x_coords, y_coords, z_coords = np.meshgrid(
                 grid_size, grid_size, grid_size, indexing="ij"
@@ -621,12 +682,12 @@ duree_animation = 10  # s
 clear = True
 simulation = True
 debug = False
-type_simulation = "fil"  # "fil" , "R" , ""
+type_simulation = ""  # "fil" , "R" , ""
 
 # ----taille----
 taille_du_monde = 1  # m
-taille_des_cellules = 0.01  # m
-cell_size_reduction = 10 # cell
+taille_des_cellules = 0.1  # m
+cell_size_reduction = 1 # cell
 dimension = 0  # int
 
 # random
@@ -647,17 +708,16 @@ f = 50 #hz
 type_aniamtion = "B"  # "P", "E" ,"B" ,"T"
 particule_visualisation = True
 
-min_alpha = 0.1 # 0 - 1
-max_alpha = 0.4# 0 - 1
+min_alpha = 0.01 # 0 - 1
+max_alpha = 0.9# 0 - 1
 #pdv axe 
-r = 0 # 0 - 180 degrès r = 0 --> axe y r = 90 ---> axe x
-v = 9 # 0 - 180 degrès
+r = 15 # 0 - 180 degrès r = 0 --> axe y r = 90 ---> axe x
+v = 70 # 0 - 180 degrès
 
 # Créer une instance de la classe World
 w = World(taille_du_monde, taille_des_cellules, dt,U = U,I = I)  # Taille du monde, taille des cells, dt -(delta t)
 """w.calc_E()"""
-
-
+w.solenoide(centre_x=0.5,centre_y=0.5, centre_z=0,axe = "z" , longueur= 1, rayon = 0.3,densité_de_spires= 5, nombre_total= 1000)
 
 def p_random(nombres_de_particules):
     for particule in range(nombres_de_particules):
