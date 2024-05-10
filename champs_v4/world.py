@@ -145,7 +145,8 @@ class World:
                 int(part.y / self.cell_size),
                 int(part.z / self.cell_size),
             )
-
+            
+            
             vec_pos = np.stack(
                 (x_coords - part.x, y_coords - part.y, z_coords - part.z), axis=-1
             )
@@ -291,10 +292,10 @@ class World:
         rotationnel_E = self.calculate_rotationnel_E_fft()
         
         # Méthode de Runge-Kutta d'ordre 4 (RK4) pour l'intégration temporelle
-        k1 = -const.mu_0 * rotationnel_E
-        k2 = -const.mu_0 * (rotationnel_E + 0.5 * self.dt * k1)
-        k3 = -const.mu_0 * (rotationnel_E + 0.5 * self.dt * k2)
-        k4 = -const.mu_0 * (rotationnel_E + self.dt * k3)
+        k1 =  rotationnel_E
+        k2 =  (rotationnel_E + 0.5 * self.dt * k1)
+        k3 =  (rotationnel_E + 0.5 * self.dt * k2)
+        k4 =  (rotationnel_E + self.dt * k3)
 
         self.field_B = self.field_B + (self.dt / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
 
@@ -325,30 +326,46 @@ class World:
                     liste_position = self.particles.index(part)+1
                     if  liste_position < len(self.particles):
                         next_part = self.particles[liste_position]
-                        X = next_part.x-part.x
-                        Y = next_part.y-part.y
-                        Z = next_part.z-part.z
-                        norm = np.sqrt((X)**2 +(Y)**2 +(Z)**2            )
-                        direction_x = X/norm
-                        direction_y = Y/norm
-                        direction_z = Z/norm
-                        part.x += (direction_x * part.vx)*self.dt
-                        part.y += (direction_y * part.vy)*self.dt
-                        part.z += (direction_z * part.vz)*self.dt
                     else:
                         next_part = self.particles[0]
-                        part.x =next_part.x
-                        part.y = next_part.y
-                        part.z = next_part.z
                     
-                  
+                    X = next_part.x-part.x
+                    Y = next_part.y-part.y
+                    Z = next_part.z-part.z
+                    norm = np.sqrt((X)**2 +(Y)**2 +(Z)**2            )
+                    direction_x = X/norm
+                    direction_y = Y/norm
+                    direction_z = Z/norm
+                    dx = part.vx * dt
+                    dy = part.vx * dt
+                    dz = part.vx * dt
+                    part.x += dx*direction_x
+                    part.y += dy*direction_y
+                    if part.z > next_part.z:
+                        part.z += dz
+                    else:
                     
+                        part.z += dz*direction_z
+                        
+                    
+                        
+                    #print(part.x,part.y,part.z)
+                    
+                    if part.x >= self.size:
+                        part.x = centre_x
+                        
+                    if part.y >= self.size:
+                        part.y = centre_y
+                    if part.z >= (centre_z+longueur-1*self.cell_size):
+                        part.z = centre_z
+                   
             else:
                 # Si les coordonnées sont invalides, ignorer la mise à jour de la particule
                 print_debug(
                     f"Attention : Les coordonnées de la particule sont hors des limites du monde simulé,  x = {part.x} / y = {part.y} / z = {part.z}."
                 )
         self.temps += self.dt
+        
         # self.temps = round(self.temps, int(1/self.dt))
 
         self.calc_E()
@@ -495,7 +512,11 @@ class World:
     def plot_particle_positions(self, ax):
             for part in self.particles:
                 if part.fil == True:
-                    color = "w"
+                    if part == self.particles[0]:
+                        color = "r"
+                        
+                    else:
+                        color = "w"
                 else:
                     color = "r"
 
@@ -510,7 +531,7 @@ class World:
                 z = centre_x + rayon*np.cos(n*p)
                 y = centre_y + rayon*np.sin(n*p)
                 x = centre_z + (p/nombre_total ) * longueur
-                self.add_part(Particle(x,y,z,const.charge_electron,const.masse_electron,fil = True,solen =True))
+                self.add_part(Particle(x,y,z,const.charge_electron,const.masse_electron,fil = True,solen =True, vx=0.01 , vy = 0.01 ,vz = 0.01))
 
     
         elif axe == 'y':
@@ -519,17 +540,18 @@ class World:
                 x = centre_x + rayon*np.cos(n*p)
                 z = centre_y + rayon*np.sin(n*p)
                 y = centre_z + (p/nombre_total ) * longueur
-                self.add_part(Particle(x,y,z,const.charge_electron,const.masse_electron,fil = True,solen =True))
+                self.add_part(Particle(x,y,z,const.charge_electron,const.masse_electron,fil = True,solen =True,vx=0.01 , vy = 0.01, vz = 0.01))
 
     
         else:
             for p in range(nombre_total):
+                
                 n = ((np.pi*nombre_de_spire) / nombre_total)
                 x = centre_x + rayon*np.cos(n*p)
                 y = centre_y + rayon*np.sin(n*p)
                 z = centre_z + (p/nombre_total ) * longueur
                 
-                self.add_part(Particle(x,y,z,const.charge_electron,const.masse_electron,fil = True ,solen =True))
+                self.add_part(Particle(x,y,z,const.charge_electron,const.masse_electron,fil = True ,solen =True,vx=0.01 , vy = 0.01 ,vz = 0.01))
 
             
         
@@ -674,12 +696,12 @@ class World:
 
 
 # ----Temps-----
-dt = 1e-7  # s
-duree_simulation = 1e-6  # s
+dt = 1e-3 # s
+duree_simulation =  3e-2# s
 duree_animation = 10  # s
 
 # ---bool------
-clear = True
+clear = False
 simulation = True
 debug = False
 type_simulation = ""  # "fil" , "R" , ""
@@ -691,12 +713,12 @@ cell_size_reduction = 1 # cell
 dimension = 0  # int
 
 # random
-nombres_de_particules = 1 #int 
+nombres_de_particules = 2 #int 
 
 #fill
 axe = 'x'
-position_x = 50-1 # cell
-position_y = 50-1 # cell
+position_x = 5-1 # cell
+position_y = 5-1 # cell
 I = 40 #A
 U = 240 #V
 densité = 10
@@ -704,28 +726,34 @@ densité = 10
 type_de_courant = "cc" # "cc" "ca"
 f = 50 #hz
 
+#spire 
+centre_x = 0.5
+centre_y = 0.5
+centre_z = 0
+longueur = 1
 # animation
-type_aniamtion = "B"  # "P", "E" ,"B" ,"T"
+type_aniamtion = "E"  # "P", "E" ,"B" ,"T"
 particule_visualisation = True
 
-min_alpha = 0.01 # 0 - 1
-max_alpha = 0.9# 0 - 1
+min_alpha = 0.3 # 0 - 1
+max_alpha = 0.7# 0 - 1
 #pdv axe 
-r = 15 # 0 - 180 degrès r = 0 --> axe y r = 90 ---> axe x
-v = 70 # 0 - 180 degrès
+r = 35 # 0 - 180 degrès r = 0 --> axe y r = 90 ---> axe x
+v = 35 # 0 - 180 degrès
 
 # Créer une instance de la classe World
 w = World(taille_du_monde, taille_des_cellules, dt,U = U,I = I)  # Taille du monde, taille des cells, dt -(delta t)
 """w.calc_E()"""
-w.solenoide(centre_x=0.5,centre_y=0.5, centre_z=0,axe = "z" , longueur= 1, rayon = 0.3,densité_de_spires= 5, nombre_total= 1000)
-
+#w.solenoide(centre_x=centre_x,centre_y=centre_y, centre_z=centre_z,axe = "z" , longueur= longueur, rayon = 0.3,densité_de_spires= 10, nombre_total= 1000)
+w.add_part(Particle(0.5,0.5,0.1, const.charge_electron,const.masse_electron))
+w.add_part(Particle(0.5,0.5,0.8, -const.charge_electron,const.masse_electron))
 def p_random(nombres_de_particules):
     for particule in range(nombres_de_particules):
         x = rd.random() * taille_du_monde * taille_des_cellules / 10
         y = rd.random() * taille_du_monde * taille_des_cellules / 10
         z = rd.random() * taille_du_monde * taille_des_cellules / 10
         q = rd.choice((-1, 1)) * const.charge_electron
-        q = const.charge_electron
+        
         mass = const.masse_electron
 
         w.add_part(Particle(x, y, z, q, mass))
@@ -777,68 +805,3 @@ if simulation:
         min_alpha=min_alpha,
         max_alpha=max_alpha,
     )
-
-import time
-import discord
-from discord.ext import commands
-import pygame
-import asyncio
-import keyboard
-
-# Fonction pour initialiser pygame
-def init_pygame():
-    pygame.mixer.init()
-
-# Fonction pour jouer un son
-def play_sound():
-    print("Son joué")  # Pour le suivi dans la console, peut être retiré dans la version finale
-    # Chemin vers le fichier audio à jouer
-    sound_file_path = "simple-notification-152054.mp3"
-    # Charger le son
-    sound = pygame.mixer.Sound(sound_file_path)
-    # Jouer le son
-    sound.play()
-
-# Fonction pour envoyer un message Discord via un bot
-async def send_discord_message():
-    intents = discord.Intents.default()  # Définir les intentions du bot
-    bot = commands.Bot(command_prefix='!', intents=intents)  # Préfixe du bot Discord
-    channel_id = 1234933548331307090  # Remplacez YOUR_CHANNEL_ID par l'ID de votre canal Discord
-
-    @bot.event
-    async def on_ready():
-        channel = bot.get_channel(channel_id)
-        await channel.send("simulation terminé")
-
-    await bot.start('MTIzNDkzMTkxNTU5Mzg3NTQ4Ng.GCaX5l.y7SNN0CE9ydcH6gyc-z6g7N5R1KXlZQ1b07Vxo')  # Remplacez YOUR_BOT_TOKEN par le token de votre bot Discord
-
-# Fonction pour arrêter le programme en appuyant sur une touche
-def stop_program():
-    print("Appuyez sur la touche 'Esc' pour arrêter le programme.")
-    while True:
-        if keyboard.is_pressed('esc'):  # Si la touche 'esc' est pressée
-            print("Programme arrêté")
-            pygame.mixer.quit()  # Arrêter le lecteur audio
-            break
-
-# Fonction principale
-def main():
-    init_pygame()  # Initialiser pygame une fois
-    asyncio.run(send_discord_message())
-    while True:
-        current_hour = time.localtime().tm_hour
-        
-        if current_hour >= 7 and current_hour < 23:
-            play_sound()
-            # Appel de la fonction pour envoyer un message Discord
-            # Note : ceci est asynchrone, donc le programme continuera à s'exécuter pendant que le message est envoyé
-            
-
-        if keyboard.is_pressed('f12'):
-            break
-
-        time.sleep(3600)  # Attendre 1 heure avant de vérifier à nouveau l'heure
-
-# Démarrer le programme
-if __name__ == "__main__":
-    main()
