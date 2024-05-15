@@ -735,11 +735,11 @@ longueur = 1
 type_aniamtion = "B"  # "P", "E" ,"B" ,"T"
 particule_visualisation = True
 
-min_alpha = 0.4 # 0 - 1
+min_alpha = 0.6 # 0 - 1
 max_alpha = 0.1# 0 - 1
 #pdv axe 
-r = 0 # 0 - 180 degrès r = 0 --> axe y r = 90 ---> axe x
-v = 1 # 0 - 180 degrès
+r = 30 # 0 - 180 degrès r = 0 --> axe y r = 90 ---> axe x
+v = 30 # 0 - 180 degrès
 
 # Créer une instance de la classe World
 w = World(taille_du_monde, taille_des_cellules, dt,U = U,I = I)  # Taille du monde, taille des cells, dt -(delta t)
