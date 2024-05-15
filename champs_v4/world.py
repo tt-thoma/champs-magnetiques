@@ -606,7 +606,7 @@ class World:
             # Moyenne des vecteurs de champ dans les cellules
             averaged_field = np.mean(
                 field.reshape(
-                    (
+                       (
                         reduced_shape[0],
                         cell_size_reduction,
                         reduced_shape[1],
@@ -623,7 +623,7 @@ class World:
             norm_values = np.linalg.norm(averaged_field, axis=3)
             norm = plt.Normalize(vmin=norm_values.min(), vmax=norm_values.max())
             norm_values_normalized = norm(norm_values)
-            colors = plt.cm.inferno(1 - norm_values_normalized.ravel())
+            colors = plt.cm.inferno(1 - norm_values_normalized.ravel()**0.5)
             
             alphas = min_alpha + max_alpha * norm_values_normalized.ravel()
             
@@ -662,12 +662,12 @@ class World:
                 averaged_field[..., 0],
                 averaged_field[..., 1],
                 averaged_field[..., 2],
-                length=(0.1 / self.size * self.cell_size) * cell_size_reduction,
+                length= self.cell_size*cell_size_reduction ,
                 normalize=True,
                 colors=colors,
                 alpha=alphas,
                 capstyle='butt',
-                arrow_length_ratio=10,
+                arrow_length_ratio=0.5,
                 
             )
             
@@ -696,20 +696,20 @@ class World:
 
 
 # ----Temps-----
-dt = 1e-3 # s
-duree_simulation =  3e-2# s
+dt = 0.00000125 # s
+duree_simulation =  0.0000125# s
 duree_animation = 10  # s
 
 # ---bool------
 clear = False
 simulation = True
 debug = False
-type_simulation = ""  # "fil" , "R" , ""
+type_simulation = "fil"  # "fil" , "R" , ""
 
 # ----taille----
 taille_du_monde = 1  # m
-taille_des_cellules = 0.1  # m
-cell_size_reduction = 1 # cell
+taille_des_cellules = 0.01  # m
+cell_size_reduction = 10 # cell
 dimension = 0  # int
 
 # random
@@ -717,11 +717,11 @@ nombres_de_particules = 2 #int
 
 #fill
 axe = 'x'
-position_x = 5-1 # cell
-position_y = 5-1 # cell
+position_x = 50-1 # cell
+position_y = 50-1 # cell
 I = 40 #A
 U = 240 #V
-densité = 10
+densité = 1
 
 type_de_courant = "cc" # "cc" "ca"
 f = 50 #hz
@@ -732,21 +732,22 @@ centre_y = 0.5
 centre_z = 0
 longueur = 1
 # animation
-type_aniamtion = "E"  # "P", "E" ,"B" ,"T"
+type_aniamtion = "B"  # "P", "E" ,"B" ,"T"
 particule_visualisation = True
 
-min_alpha = 0.3 # 0 - 1
-max_alpha = 0.7# 0 - 1
+min_alpha = 0.4 # 0 - 1
+max_alpha = 0.1# 0 - 1
 #pdv axe 
-r = 35 # 0 - 180 degrès r = 0 --> axe y r = 90 ---> axe x
-v = 35 # 0 - 180 degrès
+r = 0 # 0 - 180 degrès r = 0 --> axe y r = 90 ---> axe x
+v = 1 # 0 - 180 degrès
 
 # Créer une instance de la classe World
 w = World(taille_du_monde, taille_des_cellules, dt,U = U,I = I)  # Taille du monde, taille des cells, dt -(delta t)
 """w.calc_E()"""
 #w.solenoide(centre_x=centre_x,centre_y=centre_y, centre_z=centre_z,axe = "z" , longueur= longueur, rayon = 0.3,densité_de_spires= 10, nombre_total= 1000)
-w.add_part(Particle(0.5,0.5,0.1, const.charge_electron,const.masse_electron))
-w.add_part(Particle(0.5,0.5,0.8, -const.charge_electron,const.masse_electron))
+"""w.add_part(Particle(0.4,0.4,0.4, const.charge_electron,const.masse_electron))
+w.add_part(Particle(0.5, 0.4,0.4, const.charge_electron,const.masse_electron))"""
+#w.add_part(Particle(0.05,0.05,0.08, -const.charge_electron,const.masse_electron))
 def p_random(nombres_de_particules):
     for particule in range(nombres_de_particules):
         x = rd.random() * taille_du_monde * taille_des_cellules / 10
