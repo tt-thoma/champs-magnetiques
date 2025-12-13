@@ -1,0 +1,10 @@
+Solenoid (bobine) simulation
+==========================
+Grid: nx=80, ny=80, nz=40, dx=0.001 m
+dt=8.666249406959119e-13 s, steps=50
+PML: width=8, sigma_max=2.5
+Solenoid parameters (grid cells):
+  center=(40, 40), radius=12, z0=10, z1=30, turns=20
+  current_per_turn=1.0
+Output image: coil_B_mid_slice.png
+timestamp=2025-12-13T11:20:30.985033

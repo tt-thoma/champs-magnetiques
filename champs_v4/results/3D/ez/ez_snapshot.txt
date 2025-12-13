@@ -1,0 +1,11 @@
+Simulation snapshot description
+===============================
+Grid: nx=80, ny=40, nz=1
+dx=0.001 m, dt=9.629166007732353e-13 s
+PML: width=10, sigma_max=2.0
+Conductive slab ranges (nonzero sigma):
+  x: 50..59, y: 0..39, z: 0..0
+  sigma example value: 1000000.0
+source pulse position (Ez indices): x=5, y=20, z=0
+nsteps=300
+timestamp=2025-11-22T10:33:32.118239

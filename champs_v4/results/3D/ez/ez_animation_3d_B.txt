@@ -1,0 +1,10 @@
+3D Yee simulation animation description
+====================================
+file=ez_animation_3d_B.mp4
+Grid: nx=40, ny=24, nz=8
+dx=0.002 m, dt=1.7332498813918238e-12 s
+PML: width=6, sigma_max=3.0
+Field shown: B
+Conductive bbox x:24..29 y:8..15 z:2..5
+nframes=150, step_per_frame=2
+timestamp=2025-11-22T10:33:58.006175

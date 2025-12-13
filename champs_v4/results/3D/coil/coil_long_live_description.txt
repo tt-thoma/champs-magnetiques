@@ -1,0 +1,12 @@
+Long coil live simulation run
+=======================
+Grid: nx=120, ny=120, nz=60, dx=0.0005 m
+dt=4.333124702300041e-13 s
+warmup_steps=8, warmup_time=2.386s, time_per_step=0.298260s
+remaining_steps=997, main_run_time=280.353s
+PML: width=10, sigma_max=3.0
+Solenoid parameters (grid cells):
+  center=(60, 60), radius=18, z0=15, z1=45, turns=30
+  current_per_turn=1.0
+Output image: coil_long_live_B_mid_slice.png
+timestamp=2025-11-22T21:23:28.065611
