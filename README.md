@@ -14,36 +14,46 @@ This project implements a 3D Finite Difference Time Domain (FDTD) solver using Y
 
 ## Installation
 
-1. Clone the repository:
+### 1. Clone the repository
    ```bash
    git clone https://github.com/tt-thoma/champs-magnetiques.git
    cd champs-magnetiques/champs_v4
    ```
 
-2. Install dependencies:
+### 2. Create a virtual environment (Recommended)
    ```bash
-   pip install -r requirements.txt
+   python -m venv .venv
    ```
+   Activate it in windows:
+   * Command Prompt (cmd) -- `.venv/Scripts/activate.bat`
+   * Powershell -- `.\.venv\Scripts\Activate.ps1`
+   
+   Activate it in linux:
+   * Shell (sh) or Bash -- `source ./.venv/bin/activate`
 
-   Optional: Install Numba for acceleration:
-   ```bash
-   pip install numba
-   ```
+### 3. Install dependencies
+  ```bash
+  pip install -r requirements.txt
+  ```
+  You can also install optional dependencies with:
+  ```bash
+  pip install -r requirements_opt.txt
+  ```
 
 ## Quick Start
 
-Run a basic solenoid simulation:
+### Run a basic solenoid simulation
 ```bash
 python examples/run_coil.py
 ```
 This will simulate a solenoid and save a magnetic field snapshot to `results/coil_B_mid_slice.png`.
 
-Run an animated 2D slice:
+### Run an animated 2D slice
 ```bash
 python examples/run_coil_slice_anim.py
 ```
 
-For longer simulations with logging:
+### For longer simulations (with logging)
 ```bash
 python examples/2D/run_coil_10min.py
 ```
@@ -63,7 +73,7 @@ python examples/2D/run_coil_10min.py
 ### Basic Simulation
 
 ```python
-from fdtd_yee_3d import Yee3D
+from champs_v4.fdtd_yee_3d import Yee3D
 import numpy as np
 
 # Create a 3D grid
@@ -107,29 +117,17 @@ animate_slice(sim, field='B', axis='z', out_dir='results/', nframes=100)
 ### Creating Animations from Frames
 
 If you have pre-generated frames, use the animation module:
+
 ```python
 from visualization.animation_module import create_animation
 
 # Create MP4 from 2D slice frames
-create_animation(
-    frames_dir='results/simulation/frames',
-    output_file='results/simulation/animation.mp4',
-    framerate=10,
-    mode='slice',
-    crf=23
-)
+create_animation(frames_dir='results/simulation/frames', output_file='results/simulation/animation.mp4', frame_rate=10,
+                 mode='slice', crf=23)
 
 # Generate and create 3D animation
-create_animation(
-    frames_dir='results/3d_frames',
-    output_file='results/3d_animation.mp4',
-    framerate=10,
-    mode='3d',
-    sim=my_yee3d_instance,
-    field='B',
-    nsteps=100,
-    frame_interval=5
-)
+create_animation(frames_dir='results/3d_frames', output_file='results/3d_animation.mp4', frame_rate=10, mode='3d',
+                 sim=my_yee3d_instance, field='B', nsteps=100, frame_interval=5)
 ```
 
 ## Documentation

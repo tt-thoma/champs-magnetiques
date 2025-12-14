@@ -263,11 +263,6 @@ class Yee3D:
         # apply simple E damping in PML
         if self.dampE is not None:
             # Ex/Ey/Ez have different shapes; apply component masks if available
-            # J'ai bougé la racine
-            # NONNNNNNNNNNNN
-            # Je t'ai dit que j'allais push,,,
-            # Kurwa je te laisse push d'abord alors
-            # Commit et push ton travail comme ça je merge les restes de mon côté
             if self.dampE_Ex is not None:
                 self.Ex *= self.dampE_Ex
             else:
