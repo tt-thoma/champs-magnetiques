@@ -48,3 +48,9 @@ Ce fichier liste les axes d'amélioration identifiés pour le projet de simulati
 - Pour debug : réduire grille et durée pour tests rapides.
 
 Priorité : Commencer par la stabilité (damping, CFL) et performance (Numba) pour des simulations fiables et rapides.
+
+
+
+Dans un futur lointain :
+ fusionner le modèle avec un spice ou un bem .
+ 
