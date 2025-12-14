@@ -1,13 +1,8 @@
-import sys
-import os
-# Add repo root to path
-_repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if _repo_root not in sys.path:
-    sys.path.insert(0, _repo_root)
-
 import numpy as np
 import matplotlib.pyplot as plt
-from fdtd_yee_3d import Yee3D
+
+from champs_v4.fdtd_yee_3d import Yee3D
+
 
 def test_plane_wave_dispersion():
     """
@@ -56,7 +51,7 @@ def test_plane_wave_dispersion():
     plt.title('Dispersion Relation: Exact vs Numerical')
     plt.legend()
     plt.grid(True)
-    plt.savefig('dispersion_test.png', dpi=150)
+    plt.savefig('tests/results/dispersion_test.png', dpi=150)
     plt.show()
 
     print("Dispersion test completed. Plot saved as dispersion_test.png")

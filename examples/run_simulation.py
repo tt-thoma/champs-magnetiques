@@ -1,22 +1,15 @@
-import os
-import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Ensure repository root is on sys.path so imports like fdtd_yee_3d work
-_here = os.path.dirname(__file__)
-_repo_root = os.path.abspath(os.path.join(_here, '..'))
-if _repo_root not in sys.path:
-    sys.path.insert(0, _repo_root)
+from champs_v4.fdtd_yee_3d import Yee3D
 
-from fdtd_yee_3d import Yee3D
+from . import base_dir
 
 
 def main():
     # Small demo: plane wave pulse propagating in x, snapshot Ez
-    base_dir = os.path.dirname(__file__) if '__file__' in globals() else os.getcwd()
-    out_dir = os.path.join(base_dir, '..', 'results')
-    os.makedirs(out_dir, exist_ok=True)
+    out_dir = base_dir / 'results'
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     nx, ny, nz = 80, 40, 1
     dx = 1e-3
@@ -50,7 +43,7 @@ def main():
     Ez = sim.Ez[:, :, 0]
 
     # save image
-    out_path = os.path.join(out_dir, 'ez_snapshot.png')
+    out_path = out_dir / 'ez_snapshot.png'
     plt.figure(figsize=(8, 4))
     plt.imshow(Ez.T, origin='lower', cmap='RdBu', aspect='auto')
     plt.colorbar(label='Ez (a.u.)')
@@ -61,7 +54,7 @@ def main():
     plt.savefig(out_path, dpi=150)
     plt.close()
     # write descriptive text file alongside snapshot
-    desc_path = os.path.splitext(out_path)[0] + '.txt'
+    desc_path = out_path.with_suffix(".txt")
     with open(desc_path, 'w', encoding='utf-8') as f:
         f.write('Simulation snapshot description\n')
         f.write('===============================\n')

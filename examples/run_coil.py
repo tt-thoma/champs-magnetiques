@@ -1,15 +1,9 @@
-import os
-import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Ensure repository root is on sys.path so imports like fdtd_yee_3d work
-_here = os.path.dirname(__file__)
-_repo_root = os.path.abspath(os.path.join(_here, '..'))
-if _repo_root not in sys.path:
-    sys.path.insert(0, _repo_root)
+from champs_v4.fdtd_yee_3d import Yee3D
 
-from fdtd_yee_3d import Yee3D
+from . import base_dir
 
 # Example: build a solenoid (bobine) as a stack of circular current loops
 # This script approximates each turn by adding Jz on grid cells near the ring.
@@ -51,9 +45,8 @@ def add_solenoid(sim: Yee3D, center, radius_cells, z0, z1, turns, current_per_tu
 
 
 def main():
-    base_dir = os.path.dirname(__file__) if '__file__' in globals() else os.getcwd()
-    out_dir = os.path.join(base_dir, '..', 'results')
-    os.makedirs(out_dir, exist_ok=True)
+    out_dir = base_dir / 'results'
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     # grid and time
     nx, ny, nz = 80, 80, 40
@@ -92,7 +85,7 @@ def main():
     Hmag = np.sqrt(Hx[:minx, :miny] ** 2 + Hy[:minx, :miny] ** 2 + Hz[:minx, :miny] ** 2)
 
     # save snapshot
-    out_png = os.path.join(out_dir, 'coil_B_mid_slice.png')
+    out_png = out_dir / 'coil_B_mid_slice.png'
     plt.figure(figsize=(6,6))
     plt.imshow(Hmag.T, origin='lower', cmap='inferno')
     plt.colorbar(label='|H| (a.u.)')
@@ -104,7 +97,7 @@ def main():
     plt.close()
 
     # write description
-    desc_path = os.path.join(out_dir, 'coil_simulation_description.txt')
+    desc_path = out_dir / 'coil_simulation_description.txt'
     import datetime
     with open(desc_path, 'w', encoding='utf-8') as f:
         f.write('Solenoid (bobine) simulation\n')
@@ -115,7 +108,7 @@ def main():
         f.write('Solenoid parameters (grid cells):\n')
         f.write(f'  center={center}, radius={radius_cells}, z0={z0}, z1={z1}, turns={turns}\n')
         f.write(f'  current_per_turn={current_per_turn}\n')
-        f.write(f'Output image: {os.path.basename(out_png)}\n')
+        f.write(f'Output image: {out_png.name}\n')
         f.write(f'timestamp={datetime.datetime.now().isoformat()}\n')
 
     print('Saved B field snapshot to', out_png)

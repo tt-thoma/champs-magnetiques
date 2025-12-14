@@ -1,8 +1,8 @@
-import sys
-sys.path.insert(0, r'c:\Espace de programation\champs-magnetiques\champs_v4')
-from fdtd_yee_3d import Yee3D
-import numpy as np
 import math
+
+import numpy as np
+
+from champs_v4.fdtd_yee_3d import Yee3D
 
 
 def run_skin_depth_test():

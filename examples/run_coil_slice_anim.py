@@ -1,16 +1,9 @@
-import os
-import sys
 import numpy as np
 
-# Ensure repository root is on sys.path so imports like fdtd_yee_3d work
-_here = os.path.dirname(__file__)
-_repo_root = os.path.abspath(os.path.join(_here, '..'))
-if _repo_root not in sys.path:
-    sys.path.insert(0, _repo_root)
+from champs_v4.fdtd_yee_3d import Yee3D
+from champs_v4.visualization.field_slice_anim import animate_slice
 
-from fdtd_yee_3d import Yee3D
-
-from visualization.field_slice_anim import animate_slice
+from . import base_dir as base
 
 """
 Example runner: construct coarse solenoid, run brief simulation, and create a 2D slice
@@ -36,9 +29,8 @@ def add_solenoid_simple(sim, center, radius_cells, z0, z1, turns, current_per_tu
 
 
 def main():
-    base = os.path.dirname(__file__) if '__file__' in globals() else os.getcwd()
-    results_dir = os.path.join(base, '..', 'results')
-    os.makedirs(results_dir, exist_ok=True)
+    results_dir = base / "results"
+    results_dir.mkdir(parents=True, exist_ok=True)
 
     # small grid for demo
     nx, ny, nz = 80, 80, 40

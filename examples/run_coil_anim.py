@@ -1,18 +1,15 @@
 import os
-import sys
+
+import datetime
+import subprocess
+
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-# Ensure repository root is on sys.path so imports like fdtd_yee_3d work
-_here = os.path.dirname(__file__)
-_repo_root = os.path.abspath(os.path.join(_here, '..'))
-if _repo_root not in sys.path:
-    sys.path.insert(0, _repo_root)
+from champs_v4.fdtd_yee_3d import Yee3D
 
-from fdtd_yee_3d import Yee3D
-import subprocess
-import datetime
+from . import base_dir as base
 
 """
 Animate a coarse helical solenoid and its magnetic field (H) using Yee3D.
@@ -62,10 +59,9 @@ def add_helical_coil(sim: Yee3D, center, radius, z0, z1, turns, current, segment
 
 
 def main():
-    base = os.path.dirname(__file__) if '__file__' in globals() else os.getcwd()
-    out_dir = os.path.join(base, '..', 'results')
-    frames_dir = os.path.join(out_dir, 'frames_coil')
-    os.makedirs(frames_dir, exist_ok=True)
+    out_dir = base / 'results'
+    frames_dir = out_dir / 'frames_coil'
+    frames_dir.mkdir(parents=True, exist_ok=True)
 
     # grid
     nx, ny, nz = 80, 80, 40
@@ -101,16 +97,16 @@ def main():
     zs = np.arange(0, nz, 4)
     X, Y, Z = np.meshgrid(xs, ys, zs, indexing='ij')
 
+    Jx_base = sim.Jx.copy()
+    Jy_base = sim.Jy.copy()
+    Jz_base = sim.Jz.copy()
+
     for n in range(nsteps):
         # modulate current (global multiplier)
         drive = 0.5 * (1.0 + np.sin(omega * n * dt))  # between 0 and 1
         # scale J arrays (we added steady J earlier; here we apply time multiplier)
         # For simplicity, scale whole arrays in-place by drive factor relative to baseline 1.0
         # (store baseline once on first iteration)
-        if n == 0:
-            Jx_base = sim.Jx.copy()
-            Jy_base = sim.Jy.copy()
-            Jz_base = sim.Jz.copy()
         sim.Jx[:] = Jx_base * drive
         sim.Jy[:] = Jy_base * drive
         sim.Jz[:] = Jz_base * drive
@@ -141,7 +137,7 @@ def main():
             # normalize vectors for plotting
             mag = np.sqrt(U * U + V * V + W * W) + 1e-20
             # scale factor for arrows
-            scale = 4.0
+            scale = 4
             ax.quiver(Xf, Yf, Zf, U / mag, V / mag, W / mag, length=scale, normalize=False, linewidth=0.5)
             ax.set_xlim(0, nx)
             ax.set_ylim(0, ny)
@@ -152,16 +148,17 @@ def main():
             ax.view_init(elev=30, azim=(360.0 * frame_idx / (nsteps / frame_interval)))
             plt.title(f'Coil B-field (H) — frame {frame_idx}')
             plt.tight_layout()
-            fname = os.path.join(frames_dir, f'frame_{frame_idx:04d}.png')
+            fname = frames_dir / f'frame_{frame_idx:04d}.png'
             plt.savefig(fname, dpi=120)
             plt.close(fig)
             frame_idx += 1
             print(f'Wrote frame {frame_idx}')
 
     # assemble into mp4 using ffmpeg if available
-    out_mp4 = os.path.join(out_dir, 'coil_B_3d.mp4')
+    out_mp4 = out_dir / 'coil_B_3d.mp4'
     try:
-        cmd = ['ffmpeg', '-y', '-framerate', str(int(1.0 / (frame_interval * dt))), '-i', os.path.join(frames_dir, 'frame_%04d.png'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p', out_mp4]
+        # TODO: Fix
+        cmd = ['ffmpeg', '-y', '-framerate', str(int(1.0 / (frame_interval * dt))), '-i', frames_dir / 'frame_%04d.png', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', out_mp4]
         print('Running ffmpeg to assemble MP4 (this may take a while) ...')
         subprocess.run(cmd, check=True)
         print('MP4 assembled at', out_mp4)
@@ -170,7 +167,7 @@ def main():
         print('Exception:', e)
 
     # write metadata
-    desc = os.path.join(out_dir, 'coil_animation_description.txt')
+    desc = out_dir / 'coil_animation_description.txt'
     with open(desc, 'w', encoding='utf-8') as f:
         f.write('Coil animation run\n')
         f.write('=================\n')

@@ -1,21 +1,15 @@
-import os
-import sys
 import numpy as np
 
-# Ensure repository root is on sys.path
-_here = os.path.dirname(__file__)
-_repo_root = os.path.abspath(os.path.join(_here, '..'))
-if _repo_root not in sys.path:
-    sys.path.insert(0, _repo_root)
+from champs_v4.fdtd_yee_3d import Yee3D
+from champs_v4.visualization.animation_module import create_animation
 
-from fdtd_yee_3d import Yee3D
-from visualization.animation_module import create_animation
+from . import base_dir
+
 
 def main():
     # Configuration pour un test rapide d'antenne
-    base_dir = os.path.dirname(__file__) if '__file__' in globals() else os.getcwd()
-    out_dir = os.path.join(base_dir, '..', 'results', 'antenna_test')
-    frames_dir = os.path.join(out_dir, 'frames')
+    out_dir = base_dir / 'results' / 'antenna_test'
+    frames_dir = out_dir / 'frames'
 
     # Grille petite pour test rapide
     nx, ny, nz = 40, 40, 40
@@ -43,8 +37,8 @@ def main():
 
     # Créer l'animation 3D
     mp4_path = create_animation(
-        frames_dir=frames_dir,
-        output_file=os.path.join(out_dir, 'antenna_test_3d.mp4'),
+        frames_dir=str(frames_dir),
+        output_file=str(out_dir / 'antenna_test_3d.mp4'),
         framerate=5,
         mode='3d',
         sim=sim,
