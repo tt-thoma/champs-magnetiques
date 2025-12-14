@@ -1,9 +1,0 @@
-{
-    "cSpell.words": [
-        "arange",
-        "astype",
-        "imshow",
-        "meshgrid"
-    ],
-    "python.analysis.typeCheckingMode": "basic"
-}
