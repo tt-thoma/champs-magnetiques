@@ -82,6 +82,22 @@ class Yee3D:
         self.dx = float(dx)
         self.dt = float(dt)
 
+        self.psi_ex_dy = None
+        self.psi_ex_dz = None
+
+        self.psi_ey_dx = None
+        self.psi_ey_dz = None
+
+        self.psi_ez_dx = None
+        self.psi_ez_dy = None
+
+        self.psi_hx_dy = None
+
+        self.psi_hy_dx = None
+        self.psi_hy_dz = None
+
+        self.psi_hz_dy = None
+
         # fields: using Yee stagger: E components centered on edges,
         # H components centered on faces. We'll store arrays sized so
         # that finite difference indexing is straightforward.
@@ -292,79 +308,95 @@ class Yee3D:
         # derivative dEz/dy
         dEz_dy = (self.Ez[:-1, 1:, :] - self.Ez[:-1, :-1, :]) / dx
         dEy_dz = (self.Ey[:-1, :, 1:] - self.Ey[:-1, :, :-1]) / dx
+
         # apply CPML auxiliary psi (if initialized)
-        if hasattr(self, 'psi_ez_dy'):
+        if self.psi_ez_dy is not None:
             self.psi_ez_dy = self.b_ez_dy * self.psi_ez_dy + self.c_ez_dy * dEz_dy
             dEz_eff = dEz_dy + self.psi_ez_dy
         else:
             dEz_eff = dEz_dy
-        if hasattr(self, 'psi_ey_dz'):
+
+        if self.psi_ey_dz is not None:
             self.psi_ey_dz = self.b_ey_dz * self.psi_ey_dz + self.c_ey_dz * dEy_dz
             dEy_eff = dEy_dz + self.psi_ey_dz
         else:
             dEy_eff = dEy_dz
+
         self.Hx[:-1, :, :] += -coef * (dEz_eff - dEy_eff)
         # Hy update
         dEx_dz = (self.Ex[:, :-1, 1:] - self.Ex[:, :-1, :-1]) / dx
         dEz_dx = (self.Ez[1:, :-1, :] - self.Ez[:-1, :-1, :]) / dx
-        if hasattr(self, 'psi_ex_dz'):
+
+        if self.psi_ex_dz is not None:
             self.psi_ex_dz = self.b_ex_dz * self.psi_ex_dz + self.c_ex_dz * dEx_dz
             dEx_eff = dEx_dz + self.psi_ex_dz
         else:
             dEx_eff = dEx_dz
-        if hasattr(self, 'psi_ez_dx'):
+
+        if self.psi_ez_dx is not None:
             self.psi_ez_dx = self.b_ez_dx * self.psi_ez_dx + self.c_ez_dx * dEz_dx
             dEz_eff2 = dEz_dx + self.psi_ez_dx
         else:
             dEz_eff2 = dEz_dx
+
         self.Hy[:, :-1, :] += -coef * (dEx_eff - dEz_eff2)
         # Hz update
         dEy_dx = (self.Ey[1:, :, :-1] - self.Ey[:-1, :, :-1]) / dx
         dEx_dy = (self.Ex[:, 1:, :-1] - self.Ex[:, :-1, :-1]) / dx
-        if hasattr(self, 'psi_ey_dx'):
+
+        if self.psi_ey_dx is not None:
             self.psi_ey_dx = self.b_ey_dx * self.psi_ey_dx + self.c_ey_dx * dEy_dx
             dEy_eff2 = dEy_dx + self.psi_ey_dx
         else:
             dEy_eff2 = dEy_dx
-        if hasattr(self, 'psi_ex_dy'):
+
+        if self.psi_ex_dy is not None:
             self.psi_ex_dy = self.b_ex_dy * self.psi_ex_dy + self.c_ex_dy * dEx_dy
             dEx_eff2 = dEx_dy + self.psi_ex_dy
         else:
             dEx_eff2 = dEx_dy
+
         self.Hz[:, :, :-1] += -coef * (dEy_eff2 - dEx_eff2)
 
     def update_E(self):
         # E updates include conductivity and source J (at E locations)
         dt = self.dt
         dx = self.dx
-        coefH = dt / (epsilon0)
+        coefH = dt / epsilon0
+
         # Ex update on indices Ex[0:nx, 1:ny, 1:nz]
         nx, ny, nz = self.nx, self.ny, self.nz
+
         if nx > 0 and ny > 1 and nz > 1:
             curlHx = (self.Hz[0:nx, 1:ny, 1:nz] - self.Hz[0:nx, 0:ny-1, 1:nz]) / dx - (
                 self.Hy[0:nx, 1:ny, 1:nz] - self.Hy[0:nx, 1:ny, 0:nz-1]
             ) / dx
+
             # Stable update accounting for conductivity (semi-implicit)
             eps_local = epsilon0 * self.eps_Ex[0:nx, 1:ny, 1:nz] + 1e-30
             sigma_local = self.sig_Ex[0:nx, 1:ny, 1:nz]
             alpha = (sigma_local * dt) / (2.0 * eps_local)
             denom = 1.0 + alpha
             numer_factor = 1.0 - alpha
+
             # incorporate CPML psi for derivatives of H entering Ex update
             # dHz/dy and dHy/dz terms used in curlHx have shapes matching curlHx
             dHz_dy = (self.Hz[0:nx, 1:ny, 1:nz] - self.Hz[0:nx, 0:ny-1, 1:nz]) / dx
             dHy_dz = (self.Hy[0:nx, 1:ny, 1:nz] - self.Hy[0:nx, 1:ny, 0:nz-1]) / dx
-            if hasattr(self, 'psi_hz_dy'):
+
+            if self.psi_hz_dy is not None:
                 # psi_hz_dy shape should match (nx,ny,nz)
                 self.psi_hz_dy = self.b_hz_dy * self.psi_hz_dy + self.c_hz_dy * dHz_dy
                 dHz_eff = dHz_dy + self.psi_hz_dy
             else:
                 dHz_eff = dHz_dy
-            if hasattr(self, 'psi_hy_dz'):
+
+            if self.psi_hy_dz is not None:
                 self.psi_hy_dz = self.b_hy_dz * self.psi_hy_dz + self.c_hy_dz * dHy_dz
                 dHy_eff = dHy_dz + self.psi_hy_dz
             else:
                 dHy_eff = dHy_dz
+
             curlHx_eff = dHz_eff - dHy_eff
             rhs = (curlHx_eff - self.Jx[0:nx, 1:ny, 1:nz]) * (dt / eps_local)
             self.Ex[0:nx, 1:ny, 1:nz] = (numer_factor * self.Ex[0:nx, 1:ny, 1:nz] + rhs) / denom
@@ -374,20 +406,23 @@ class Yee3D:
             curlHy = (self.Hx[1:nx, 0:ny, 1:nz] - self.Hx[1:nx, 0:ny, 0:nz-1]) / dx - (
                 self.Hz[1:nx, 0:ny, 1:nz] - self.Hz[0:nx-1, 0:ny, 1:nz]
             ) / dx
+
             eps_local = epsilon0 * self.eps_Ey[1:nx, 0:ny, 1:nz] + 1e-30
             sigma_local = self.sig_Ey[1:nx, 0:ny, 1:nz]
             alpha = (sigma_local * dt) / (2.0 * eps_local)
             denom = 1.0 + alpha
             numer_factor = 1.0 - alpha
+
             # include psi terms for H derivatives entering Ey
             dHx_dz = (self.Hx[1:nx, 0:ny, 1:nz] - self.Hx[1:nx, 0:ny, 0:nz-1]) / dx
             dHz_dx = (self.Hz[1:nx, 0:ny, 1:nz] - self.Hz[0:nx-1, 0:ny, 1:nz]) / dx
-            if hasattr(self, 'psi_hx_dz'):
+
+            if self.psi_hx_dz is not None:
                 self.psi_hx_dz = self.b_hx_dz * self.psi_hx_dz + self.c_hx_dz * dHx_dz
                 dHx_eff = dHx_dz + self.psi_hx_dz
             else:
                 dHx_eff = dHx_dz
-            if hasattr(self, 'psi_hz_dx'):
+            if self.psi_hz_dx is not None:
                 self.psi_hz_dx = self.b_hz_dx * self.psi_hz_dx + self.c_hz_dx * dHz_dx
                 dHz_eff2 = dHz_dx + self.psi_hz_dx
             else:
@@ -401,24 +436,28 @@ class Yee3D:
             curlHz = (self.Hy[1:nx, 1:ny, 0:nz] - self.Hy[0:nx-1, 1:ny, 0:nz]) / dx - (
                 self.Hx[1:nx, 1:ny, 0:nz] - self.Hx[1:nx, 0:ny-1, 0:nz]
             ) / dx
+
             eps_local = epsilon0 * self.eps_Ez[1:nx, 1:ny, 0:nz] + 1e-30
             sigma_local = self.sig_Ez[1:nx, 1:ny, 0:nz]
             alpha = (sigma_local * dt) / (2.0 * eps_local)
             denom = 1.0 + alpha
             numer_factor = 1.0 - alpha
+
             # include H-derivative psi terms for Ez update
             dHy_dx = (self.Hy[1:nx, 1:ny, 0:nz] - self.Hy[0:nx-1, 1:ny, 0:nz]) / dx
             dHx_dy = (self.Hx[1:nx, 1:ny, 0:nz] - self.Hx[1:nx, 0:ny-1, 0:nz]) / dx
-            if hasattr(self, 'psi_hy_dx'):
+
+            if self.psi_hy_dx is not None:
                 self.psi_hy_dx = self.b_hy_dx * self.psi_hy_dx + self.c_hy_dx * dHy_dx
                 dHy_eff3 = dHy_dx + self.psi_hy_dx
             else:
                 dHy_eff3 = dHy_dx
-            if hasattr(self, 'psi_hx_dy'):
+            if self.psi_hx_dy is not None:
                 self.psi_hx_dy = self.b_hx_dy * self.psi_hx_dy + self.c_hx_dy * dHx_dy
                 dHx_eff3 = dHx_dy + self.psi_hx_dy
             else:
                 dHx_eff3 = dHx_dy
+
             curlHz_eff = dHy_eff3 - dHx_eff3
             rhs = (curlHz_eff - self.Jz[1:nx, 1:ny, 0:nz]) * (dt / eps_local)
             self.Ez[1:nx, 1:ny, 0:nz] = (numer_factor * self.Ez[1:nx, 1:ny, 0:nz] + rhs) / denom
@@ -435,7 +474,7 @@ class Yee3D:
         damping mask near boundaries to absorb outgoing waves. Not a full
         CPML implementation, but effective for reducing reflections.
         """
-        nx, ny, nz = self.nx, self.ny, self.nz
+
         w = max(0, int(self.pml_width))
         sigma_max = float(self.pml_sigma_max)
 
@@ -458,11 +497,13 @@ class Yee3D:
         sy = axis_sigma(self.Ex.shape[1])[None, :, None]
         sz = axis_sigma(self.Ex.shape[2])[None, None, :]
         sigma_total_Ex = sx + sy + sz
+
         # Ey shape: (nx+1, ny, nz+1)
         sx2 = axis_sigma(self.Ey.shape[0])[:, None, None]
         sy2 = axis_sigma(self.Ey.shape[1])[None, :, None]
         sz2 = axis_sigma(self.Ey.shape[2])[None, None, :]
         sigma_total_Ey = sx2 + sy2 + sz2
+
         # Ez shape: (nx+1, ny+1, nz)
         sx3 = axis_sigma(self.Ez.shape[0])[:, None, None]
         sy3 = axis_sigma(self.Ez.shape[1])[None, :, None]
