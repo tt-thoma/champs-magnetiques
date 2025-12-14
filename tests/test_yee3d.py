@@ -1,10 +1,12 @@
+import unittest
+
 import numpy as np
 import pytest
 
 from champs_v4.fdtd_yee_3d import Yee3D
 
 
-class TestYee3D:
+class TestYee3D(unittest.TestCase):
     """Unit tests for Yee3D FDTD solver."""
 
     def test_initialization(self):
@@ -128,18 +130,4 @@ class TestYee3D:
 
 
 if __name__ == '__main__':
-    # Run tests manually
-    test_instance = TestYee3D()
-    test_instance.test_initialization()
-    print("test_initialization passed")
-    test_instance.test_set_materials()
-    print("test_set_materials passed")
-    test_instance.test_step_stability()
-    print("test_step_stability passed")
-    test_instance.test_plane_wave_propagation()
-    print("test_plane_wave_propagation passed")
-    test_instance.test_coil_addition()
-    print("test_coil_addition passed")
-    test_instance.test_pml_initialization()
-    print("test_pml_initialization passed")
-    print("All tests passed!")
+    unittest.main()
