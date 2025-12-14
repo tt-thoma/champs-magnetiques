@@ -1,8 +1,0 @@
-Slice field-line animation
-========================
-Grid: nx=80, ny=80, nz=40, dx=0.001
-dt=8.666249406959119e-13 s, steps=120, frame_interval=3
-Field: B, axis=z, index=20
-Frames: 40 in C:\Espace de programation\champs-magnetiques\champs_v4\examples\..\results\frames_coil_slice
-Output MP4: None
-timestamp=2025-12-13T22:16:13.443854

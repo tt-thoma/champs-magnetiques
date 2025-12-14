@@ -1,8 +1,0 @@
-Coil animation run
-=================
-Grid: nx=80, ny=80, nz=40, dx=0.001 m
-dt=8.666249406959119e-13 s, steps=120, frame_interval=3
-Coil: center=(40, 40), radius=12, z0=10, z1=30, turns=6
-Frames: 40 frames in C:\Espace de programation\champs-magnetiques\champs_v4\examples\..\results\frames_coil
-Output MP4: C:\Espace de programation\champs-magnetiques\champs_v4\examples\..\results\coil_B_3d.mp4
-timestamp=2025-11-22T10:44:44.420270
