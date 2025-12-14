@@ -13,14 +13,12 @@ import numpy as np
 import math
 from typing import Optional
 
-try:
-    import numba
+import importlib.util
+
+NUMBA = importlib.util.find_spec("numba") is not None
+if NUMBA:
     from numba import njit, prange
-    _NUMBA = True
-except Exception:
-    _NUMBA = False
-    njit = None
-    prange = None
+
 
 # Physical constants
 epsilon0 = 8.8541878128e-12
