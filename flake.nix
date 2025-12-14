@@ -26,6 +26,7 @@
                   pytest
                 ]
               ))
+              jetbrains.pycharm-community
             ];
           };
         }
