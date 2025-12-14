@@ -237,7 +237,11 @@ class Yee3D:
                         if dx * dx + dy * dy <= radius_cells * radius_cells:
                             # set Jz at Ez staggered positions nearby
                             iz_idx = k
-                            if 0 <= i < self.Ez.shape[0] and 0 <= j < self.Ez.shape[1] and 0 <= iz_idx < self.Ez.shape[2]:
+                            if (
+                                    0 <= i < self.Ez.shape[0]
+                                    and 0 <= j < self.Ez.shape[1]
+                                    and 0 <= iz_idx < self.Ez.shape[2]
+                            ):
                                 self.Jz[i, j, iz_idx] += current * turns
 
                     # other axes can be implemented similarly
@@ -267,11 +271,13 @@ class Yee3D:
                 self.Ex *= self.dampE_Ex
             else:
                 self.Ex *= self.dampE
-            if hasattr(self, 'dampE_Ey'):
+
+            if self.dampE_Ey is not None:
                 self.Ey *= self.dampE_Ey
             else:
                 self.Ey *= self.dampE
-            if hasattr(self, 'dampE_Ez'):
+
+            if self.dampE_Ez is not None:
                 self.Ez *= self.dampE_Ez
             else:
                 self.Ez *= self.dampE
