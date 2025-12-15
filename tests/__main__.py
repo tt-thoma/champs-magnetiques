@@ -27,19 +27,22 @@ if TYPE_CHECKING:
 
 class GitHubTestResult(TextTestResult):
     def startTest(self, test: unittest.case.TestCase) -> None:
-        print(f"::group::{self.getDescription(test)}")
+        self.stream.write(f"::group::{self.getDescription(test)}")
         super().startTest(test)
-        print("::endgroup::")
+        self.stream.write("\n::endgroup::")
+        self.stream.flush()
 
-    def addError(self, test: unittest.case.TestCase, err: OptExcInfo) -> None:
+    def addError(self, test: unittest.case.TestCase, err: "OptExcInfo") -> None:
         if err[0] is not None:
             pretty_err = traceback.format_exception(err[1])[-1].strip("\n")
+            file = err[1]
         else:
             pretty_err = "ERROR"
-        print(
+        self.stream.write(
             f"::error file={inspect.getfile(test.__class__)},col={inspect.getsourcelines(test.__class__)[1]},"
             f"title={str(test)}::{pretty_err}"
         )
+        self.stream.flush()
         return super().addError(test, err)
 
 
@@ -79,14 +82,6 @@ if __name__ == "__main__":
         verbosity=2, durations=0, resultclass=opts.resultclass
     )
     results: TextTestResult = runner.run(test_suite(opts))
-
-    case: TestCase
-    reason: str
-    for case, reason in results.skipped:
-        print(
-            f"::notice file={inspect.getfile(case.__class__)},col={inspect.getsourcelines(case)[1]},"
-            f"title={str(case)} ... skipped::{reason}"
-        )
 
     if not results.wasSuccessful():
         sys.exit(-1)

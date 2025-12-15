@@ -1,7 +1,7 @@
 import numpy as np
 
 from champs_v4.fdtd_yee_3d import Yee3D
-from visualization.animation_module import create_animation
+from champs_v4.visualization.animation_module import create_animation
 
 from . import base_dir
 
