@@ -30,4 +30,4 @@ jobs:
         python -m pip install -r requirements_opt.txt
     - name: Test
       run: |
-        python -m tests -f
+        python -m tests -f -g
