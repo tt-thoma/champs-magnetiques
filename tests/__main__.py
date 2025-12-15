@@ -32,7 +32,7 @@ class GitHubTestResult(TextTestResult):
 
     def addError(self, test: unittest.case.TestCase, err: OptExcInfo) -> None:
         print(
-            f"::error file={inspect.getfile(test.__class__)},col={inspect.getsourcelines(test)[1]},"
+            f"::error file={inspect.getfile(test.__class__)},col={inspect.getsourcelines(test.__class__)[1]},"
             f"title={str(test)}::{err}"
         )
         return super().addError(test, err)
