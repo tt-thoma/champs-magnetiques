@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 epsilon0 = 8.8541878128e-12
 mu0 = 4 * math.pi * 1e-7
 c0 = 1.0 / math.sqrt(epsilon0 * mu0)
+tiny = 1e-30
 
 
 class Yee3D:
@@ -101,13 +102,13 @@ class Yee3D:
         # fields: using Yee stagger: E components centered on edges,
         # H components centered on faces. We'll store arrays sized so
         # that finite difference indexing is straightforward.
-        self.Ex = np.zeros((nx, ny + 1, nz + 1), dtype=np.float64)
-        self.Ey = np.zeros((nx + 1, ny, nz + 1), dtype=np.float64)
-        self.Ez = np.zeros((nx + 1, ny + 1, nz), dtype=np.float64)
+        self.Ex = np.zeros((nx    , ny + 1, nz + 1), dtype=np.float64)
+        self.Ey = np.zeros((nx + 1, ny    , nz + 1), dtype=np.float64)
+        self.Ez = np.zeros((nx + 1, ny + 1, nz    ), dtype=np.float64)
 
-        self.Hx = np.zeros((nx + 1, ny, nz), dtype=np.float64)
-        self.Hy = np.zeros((nx, ny + 1, nz), dtype=np.float64)
-        self.Hz = np.zeros((nx, ny, nz + 1), dtype=np.float64)
+        self.Hx = np.zeros((nx + 1, ny    , nz    ), dtype=np.float64)
+        self.Hy = np.zeros((nx    , ny + 1, nz    ), dtype=np.float64)
+        self.Hz = np.zeros((nx    , ny    , nz + 1), dtype=np.float64)
 
         # material maps (cell-centered)
         self.epsilon_r = np.ones((nx, ny, nz), dtype=np.float64)
@@ -119,13 +120,14 @@ class Yee3D:
         self.Jz = np.zeros_like(self.Ez)
 
         # Derived coefficients for update (will be computed)
-        self._compute_material_coeffs()
+        self._compute_material_coefficients()
 
         if use_numba and not NUMBA:
             logger.warning("use_numba was enabled while the numba package has not been installed.")
 
         # optional numba
         self.use_numba = use_numba and NUMBA
+
         if self.use_numba:
             # prepare numba compiled kernels if available
             try:
@@ -139,73 +141,82 @@ class Yee3D:
         self.pml_sigma_max = float(pml_sigma_max)
         self._init_pml()
 
-    def _compute_material_coeffs(self):
-        # coefficients at E locations: need epsilon and sigma at E positions.
-        # For simplicity, interpolate cell-centered epsilon/sigma to edge locations
-        # via averaging neighbor cells.
-        nx, ny, nz = self.nx, self.ny, self.nz
+    def _compute_material_coefficients(self):
+        """
+        Computes coefficients at E locations.
+        Need epsilon and sigma at E positions.
+
+        Note: For simplicity, interpolate cell-centered epsilon/sigma to edge locations
+        via averaging neighbor cells.
+        """
+
         # create arrays for eps and sigma at E-grid shapes
-        self.eps_Ex = np.zeros_like(self.Ex)
-        self.sig_Ex = np.zeros_like(self.Ex)
+        epsilon_Ex = np.zeros_like(self.Ex)
+        sigma_Ex = np.zeros_like(self.Ex)
 
-        for i in range(nx):
-            for j in range(ny + 1):
-                for k in range(nz + 1):
+        for x in range(self.nx):
+            for y in range(self.ny + 1):
+                for z in range(self.nz + 1):
                     # neighbors cell indices (clamp)
-                    il = min(max(i, 0), nx - 1)
-                    jl = min(max(j - 1, 0), ny - 1)
-                    kl = min(max(k - 1, 0), nz - 1)
+                    x_left = min(max(x, 0), self.nx - 1)
+                    y_top = min(max(y - 1, 0), self.ny - 1)
+                    z_back = min(max(z - 1, 0), self.nz - 1)
+
                     # average over up to 4 surrounding cells
-                    vals_eps = []
-                    vals_sig = []
-                    for ii in [il, min(il + 1, nx - 1)]:
-                        for jj in [jl, min(jl + 1, ny - 1)]:
-                            for kk in [kl, min(kl + 1, nz - 1)]:
-                                vals_eps.append(self.epsilon_r[ii, jj, kk])
-                                vals_sig.append(self.sigma[ii, jj, kk])
-                    self.eps_Ex[i, j, k] = np.mean(vals_eps)
-                    self.sig_Ex[i, j, k] = np.mean(vals_sig)
+                    vals_epsilon = []
+                    vals_sigma = []
 
-        self.eps_Ey = np.zeros_like(self.Ey)
-        self.sig_Ey = np.zeros_like(self.Ey)
-        for i in range(nx + 1):
-            for j in range(ny):
-                for k in range(nz + 1):
-                    il = min(max(i - 1, 0), nx - 1)
-                    jl = min(max(j, 0), ny - 1)
-                    kl = min(max(k - 1, 0), nz - 1)
-                    vals_eps = []
-                    vals_sig = []
-                    for ii in [il, min(il + 1, nx - 1)]:
-                        for jj in [jl, min(jl + 1, ny - 1)]:
-                            for kk in [kl, min(kl + 1, nz - 1)]:
-                                vals_eps.append(self.epsilon_r[ii, jj, kk])
-                                vals_sig.append(self.sigma[ii, jj, kk])
-                    self.eps_Ey[i, j, k] = np.mean(vals_eps)
-                    self.sig_Ey[i, j, k] = np.mean(vals_sig)
+                    for ii in [x_left, min(x_left + 1, self.nx - 1)]:
+                        for jj in [y_top, min(y_top + 1, self.ny - 1)]:
+                            for kk in [z_back, min(z_back + 1, self.nz - 1)]:
+                                vals_epsilon.append(self.epsilon_r[ii, jj, kk])
+                                vals_sigma.append(self.sigma[ii, jj, kk])
 
-        self.eps_Ez = np.zeros_like(self.Ez)
-        self.sig_Ez = np.zeros_like(self.Ez)
-        for i in range(nx + 1):
-            for j in range(ny + 1):
-                for k in range(nz):
-                    il = min(max(i - 1, 0), nx - 1)
-                    jl = min(max(j - 1, 0), ny - 1)
-                    kl = min(max(k, 0), nz - 1)
-                    vals_eps = []
-                    vals_sig = []
-                    for ii in [il, min(il + 1, nx - 1)]:
-                        for jj in [jl, min(jl + 1, ny - 1)]:
-                            for kk in [kl, min(kl + 1, nz - 1)]:
-                                vals_eps.append(self.epsilon_r[ii, jj, kk])
-                                vals_sig.append(self.sigma[ii, jj, kk])
-                    self.eps_Ez[i, j, k] = np.mean(vals_eps)
-                    self.sig_Ez[i, j, k] = np.mean(vals_sig)
+                    epsilon_Ex[x, y, z] = np.mean(vals_epsilon)
+                    sigma_Ex[x, y, z] = np.mean(vals_sigma)
+
+        epsilon_Ey = np.zeros_like(self.Ey)
+        sigma_Ey = np.zeros_like(self.Ey)
+        for x in range(self.nx + 1):
+            for y in range(self.ny):
+                for z in range(self.nz + 1):
+                    x_left = min(max(x - 1, 0), self.nx - 1)
+                    y_top = min(max(y, 0), self.ny - 1)
+                    z_back = min(max(z - 1, 0), self.nz - 1)
+                    vals_epsilon = []
+                    vals_sigma = []
+
+                    for ii in [x_left, min(x_left + 1, self.nx - 1)]:
+                        for jj in [y_top, min(y_top + 1, self.ny - 1)]:
+                            for kk in [z_back, min(z_back + 1, self.nz - 1)]:
+                                vals_epsilon.append(self.epsilon_r[ii, jj, kk])
+                                vals_sigma.append(self.sigma[ii, jj, kk])
+
+                    epsilon_Ey[x, y, z] = np.mean(vals_epsilon)
+                    sigma_Ey[x, y, z] = np.mean(vals_sigma)
+
+        epsilon_Ez = np.zeros_like(self.Ez)
+        sigma_Ez = np.zeros_like(self.Ez)
+        for x in range(self.nx + 1):
+            for y in range(self.ny + 1):
+                for z in range(self.nz):
+                    x_left = min(max(x - 1, 0), self.nx - 1)
+                    y_top = min(max(y - 1, 0), self.ny - 1)
+                    z_back = min(max(z, 0), self.nz - 1)
+                    vals_epsilon = []
+                    vals_sigma = []
+                    for ii in [x_left, min(x_left + 1, self.nx - 1)]:
+                        for jj in [y_top, min(y_top + 1, self.ny - 1)]:
+                            for kk in [z_back, min(z_back + 1, self.nz - 1)]:
+                                vals_epsilon.append(self.epsilon_r[ii, jj, kk])
+                                vals_sigma.append(self.sigma[ii, jj, kk])
+                    epsilon_Ez[x, y, z] = np.mean(vals_epsilon)
+                    sigma_Ez[x, y, z] = np.mean(vals_sigma)
 
         # Precompute update multipliers for E fields: accounting for conductivity
-        self.cex = (1.0 / (epsilon0 * self.eps_Ex)) * self.dt
-        self.cey = (1.0 / (epsilon0 * self.eps_Ey)) * self.dt
-        self.cez = (1.0 / (epsilon0 * self.eps_Ez)) * self.dt
+        self.cex = (1.0 / (epsilon0 * epsilon_Ex)) * self.dt
+        self.cey = (1.0 / (epsilon0 * epsilon_Ey)) * self.dt
+        self.cez = (1.0 / (epsilon0 * epsilon_Ez)) * self.dt
 
     def set_materials(self, epsilon_r: np.ndarray, sigma: Optional[np.ndarray] = None):
         """
@@ -226,18 +237,20 @@ class Yee3D:
             assert sigma.shape == (self.nx, self.ny, self.nz)
             self.sigma = sigma.astype(np.float64)
 
-        self._compute_material_coeffs()
+        self._compute_material_coefficients()
 
     def add_coil(self, center, radius_cells, axis='z', turns=1, current=1.0):
         """
         Approximate a coil (solenoid) by adding macroscopic current density J
         along axis direction distributed over the loop cells.
+
         center : (ix,iy,iz) cell indices for coil center
         radius_cells : radius in cells
         axis : 'x','y' or 'z'
         turns : number of turns (multiplicative factor)
         current : current amplitude (A)
         """
+
         cx, cy, cz = center
         ix0, iy0, iz0 = int(cx), int(cy), int(cz)
 
@@ -373,8 +386,8 @@ class Yee3D:
             ) / dx
 
             # Stable update accounting for conductivity (semi-implicit)
-            eps_local = epsilon0 * self.eps_Ex[0:nx, 1:ny, 1:nz] + 1e-30
-            sigma_local = self.sig_Ex[0:nx, 1:ny, 1:nz]
+            eps_local = epsilon0 * self.epsilon_Ex[0:nx, 1:ny, 1:nz] + 1e-30
+            sigma_local = self.sigma_Ex[0:nx, 1:ny, 1:nz]
             alpha = (sigma_local * dt) / (2.0 * eps_local)
             denom = 1.0 + alpha
             numer_factor = 1.0 - alpha
@@ -407,8 +420,8 @@ class Yee3D:
                 self.Hz[1:nx, 0:ny, 1:nz] - self.Hz[0:nx-1, 0:ny, 1:nz]
             ) / dx
 
-            eps_local = epsilon0 * self.eps_Ey[1:nx, 0:ny, 1:nz] + 1e-30
-            sigma_local = self.sig_Ey[1:nx, 0:ny, 1:nz]
+            eps_local = epsilon0 * self.epsilon_Ey[1:nx, 0:ny, 1:nz] + 1e-30
+            sigma_local = self.sigma_Ey[1:nx, 0:ny, 1:nz]
             alpha = (sigma_local * dt) / (2.0 * eps_local)
             denom = 1.0 + alpha
             numer_factor = 1.0 - alpha
@@ -437,8 +450,8 @@ class Yee3D:
                 self.Hx[1:nx, 1:ny, 0:nz] - self.Hx[1:nx, 0:ny-1, 0:nz]
             ) / dx
 
-            eps_local = epsilon0 * self.eps_Ez[1:nx, 1:ny, 0:nz] + 1e-30
-            sigma_local = self.sig_Ez[1:nx, 1:ny, 0:nz]
+            eps_local = epsilon0 * self.epsilon_Ez[1:nx, 1:ny, 0:nz] + 1e-30
+            sigma_local = self.sigma_Ez[1:nx, 1:ny, 0:nz]
             alpha = (sigma_local * dt) / (2.0 * eps_local)
             denom = 1.0 + alpha
             numer_factor = 1.0 - alpha
@@ -544,25 +557,28 @@ class Yee3D:
         # Helper to average sigma_total arrays to derivative locations
         # For derivative shapes we average neighboring sigma values
         # sigma for dEz/dy (Ez shape: (nx+1, ny+1, nz)) -> average at Ez[:-1,1:] and Ez[:-1,:-1]
-        sigma_ez_dy = 0.5 * (sigma_total_Ez[:-1, 1:, :] + sigma_total_Ez[:-1, :-1, :])
-        sigma_ey_dz = 0.5 * (sigma_total_Ey[:-1, :, 1:] + sigma_total_Ey[:-1, :, :-1])
-        sigma_ex_dz = 0.5 * (sigma_total_Ex[:, :-1, 1:] + sigma_total_Ex[:, :-1, :-1])
-        sigma_ez_dx = 0.5 * (sigma_total_Ez[1:, :-1, :] + sigma_total_Ez[:-1, :-1, :])
-        sigma_ey_dx = 0.5 * (sigma_total_Ey[1:, :, :-1] + sigma_total_Ey[:-1, :, :-1])
         sigma_ex_dy = 0.5 * (sigma_total_Ex[:, 1:, :-1] + sigma_total_Ex[:, :-1, :-1])
+        sigma_ex_dz = 0.5 * (sigma_total_Ex[:, :-1, 1:] + sigma_total_Ex[:, :-1, :-1])
+
+        sigma_ey_dx = 0.5 * (sigma_total_Ey[1:, :, :-1] + sigma_total_Ey[:-1, :, :-1])
+        sigma_ey_dz = 0.5 * (sigma_total_Ey[:-1, :, 1:] + sigma_total_Ey[:-1, :, :-1])
+
+        sigma_ez_dx = 0.5 * (sigma_total_Ez[1:, :-1, :] + sigma_total_Ez[:-1, :-1, :])
+        sigma_ez_dy = 0.5 * (sigma_total_Ez[:-1, 1:, :] + sigma_total_Ez[:-1, :-1, :])
 
         # For derivatives of H, use H sigma_total analogs (sigma_total_Hx etc.)
         # Use the exact same slices as the derivatives in update_E to build sigma
-        sigma_hz_dy = 0.5 * (sigma_total_Hz[0:self.nx, 1:self.ny, 1:self.nz] + sigma_total_Hz[0:self.nx, 0:self.ny-1, 1:self.nz])
-        sigma_hy_dz = 0.5 * (sigma_total_Hy[0:self.nx, 1:self.ny, 1:self.nz] + sigma_total_Hy[0:self.nx, 1:self.ny, 0:self.nz-1])
-        sigma_hx_dz = 0.5 * (sigma_total_Hx[1:self.nx, 0:self.ny, 1:self.nz] + sigma_total_Hx[1:self.nx, 0:self.ny, 0:self.nz-1])
-        sigma_hz_dx = 0.5 * (sigma_total_Hz[1:self.nx, 0:self.ny, 1:self.nz] + sigma_total_Hz[0:self.nx-1, 0:self.ny, 1:self.nz])
-        sigma_hy_dx = 0.5 * (sigma_total_Hy[1:self.nx, 1:self.ny, 0:self.nz] + sigma_total_Hy[0:self.nx-1, 1:self.ny, 0:self.nz])
         sigma_hx_dy = 0.5 * (sigma_total_Hx[1:self.nx, 1:self.ny, 0:self.nz] + sigma_total_Hx[1:self.nx, 0:self.ny-1, 0:self.nz])
+        sigma_hx_dz = 0.5 * (sigma_total_Hx[1:self.nx, 0:self.ny, 1:self.nz] + sigma_total_Hx[1:self.nx, 0:self.ny, 0:self.nz-1])
+
+        sigma_hy_dx = 0.5 * (sigma_total_Hy[1:self.nx, 1:self.ny, 0:self.nz] + sigma_total_Hy[0:self.nx-1, 1:self.ny, 0:self.nz])
+        sigma_hy_dz = 0.5 * (sigma_total_Hy[0:self.nx, 1:self.ny, 1:self.nz] + sigma_total_Hy[0:self.nx, 1:self.ny, 0:self.nz-1])
+
+        sigma_hz_dx = 0.5 * (sigma_total_Hz[1:self.nx, 0:self.ny, 1:self.nz] + sigma_total_Hz[0:self.nx-1, 0:self.ny, 1:self.nz])
+        sigma_hz_dy = 0.5 * (sigma_total_Hz[0:self.nx, 1:self.ny, 1:self.nz] + sigma_total_Hz[0:self.nx, 0:self.ny-1, 1:self.nz])
 
         # Ensure shapes equal to (nx,ny,nz)
         # Recursion coefficients b = exp(-sigma*dt/param), c = (1-b)/sigma (approx)
-        tiny = 1e-30
         b_scale_e = dt / epsilon0
         b_scale_h = dt / mu0
 
@@ -573,34 +589,42 @@ class Yee3D:
                 c = np.where(sigma_arr > 0, (1.0 - b) / (sigma_arr + tiny), scale)
             return b, c
 
-        self.b_ez_dy, self.c_ez_dy = make_bc(sigma_ez_dy, b_scale_e)
-        self.b_ey_dz, self.c_ey_dz = make_bc(sigma_ey_dz, b_scale_e)
-        self.b_ex_dz, self.c_ex_dz = make_bc(sigma_ex_dz, b_scale_e)
-        self.b_ez_dx, self.c_ez_dx = make_bc(sigma_ez_dx, b_scale_e)
-        self.b_ey_dx, self.c_ey_dx = make_bc(sigma_ey_dx, b_scale_e)
         self.b_ex_dy, self.c_ex_dy = make_bc(sigma_ex_dy, b_scale_e)
+        self.b_ex_dz, self.c_ex_dz = make_bc(sigma_ex_dz, b_scale_e)
 
-        self.b_hz_dy, self.c_hz_dy = make_bc(sigma_hz_dy, b_scale_h)
-        self.b_hy_dz, self.c_hy_dz = make_bc(sigma_hy_dz, b_scale_h)
-        self.b_hx_dz, self.c_hx_dz = make_bc(sigma_hx_dz, b_scale_h)
-        self.b_hz_dx, self.c_hz_dx = make_bc(sigma_hz_dx, b_scale_h)
-        self.b_hy_dx, self.c_hy_dx = make_bc(sigma_hy_dx, b_scale_h)
+        self.b_ey_dx, self.c_ey_dx = make_bc(sigma_ey_dx, b_scale_e)
+        self.b_ey_dz, self.c_ey_dz = make_bc(sigma_ey_dz, b_scale_e)
+
+        self.b_ez_dx, self.c_ez_dx = make_bc(sigma_ez_dx, b_scale_e)
+        self.b_ez_dy, self.c_ez_dy = make_bc(sigma_ez_dy, b_scale_e)
+
         self.b_hx_dy, self.c_hx_dy = make_bc(sigma_hx_dy, b_scale_h)
+        self.b_hx_dz, self.c_hx_dz = make_bc(sigma_hx_dz, b_scale_h)
+
+        self.b_hy_dx, self.c_hy_dx = make_bc(sigma_hy_dx, b_scale_h)
+        self.b_hy_dz, self.c_hy_dz = make_bc(sigma_hy_dz, b_scale_h)
+
+        self.b_hz_dx, self.c_hz_dx = make_bc(sigma_hz_dx, b_scale_h)
+        self.b_hz_dy, self.c_hz_dy = make_bc(sigma_hz_dy, b_scale_h)
 
         # Initialize psi arrays with shapes matching sigma derivative arrays
-        self.psi_ez_dy = np.zeros_like(sigma_ez_dy)
-        self.psi_ey_dz = np.zeros_like(sigma_ey_dz)
-        self.psi_ex_dz = np.zeros_like(sigma_ex_dz)
-        self.psi_ez_dx = np.zeros_like(sigma_ez_dx)
-        self.psi_ey_dx = np.zeros_like(sigma_ey_dx)
         self.psi_ex_dy = np.zeros_like(sigma_ex_dy)
+        self.psi_ex_dz = np.zeros_like(sigma_ex_dz)
 
-        self.psi_hz_dy = np.zeros_like(sigma_hz_dy)
-        self.psi_hy_dz = np.zeros_like(sigma_hy_dz)
-        self.psi_hx_dz = np.zeros_like(sigma_hx_dz)
-        self.psi_hz_dx = np.zeros_like(sigma_hz_dx)
-        self.psi_hy_dx = np.zeros_like(sigma_hy_dx)
+        self.psi_ey_dx = np.zeros_like(sigma_ey_dx)
+        self.psi_ey_dz = np.zeros_like(sigma_ey_dz)
+
+        self.psi_ez_dx = np.zeros_like(sigma_ez_dx)
+        self.psi_ez_dy = np.zeros_like(sigma_ez_dy)
+
         self.psi_hx_dy = np.zeros_like(sigma_hx_dy)
+        self.psi_hx_dz = np.zeros_like(sigma_hx_dz)
+
+        self.psi_hy_dx = np.zeros_like(sigma_hy_dx)
+        self.psi_hy_dz = np.zeros_like(sigma_hy_dz)
+
+        self.psi_hz_dx = np.zeros_like(sigma_hz_dx)
+        self.psi_hz_dy = np.zeros_like(sigma_hz_dy)
 
 
 if __name__ == '__main__':

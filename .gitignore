@@ -6,3 +6,5 @@
 
 results/
 examples/results/
+
+.python-version
