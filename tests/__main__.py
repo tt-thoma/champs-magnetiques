@@ -1,3 +1,4 @@
+import inspect
 import sys
 from optparse import OptionParser, Values
 from unittest import (
@@ -7,8 +8,6 @@ from unittest import (
     TextTestRunner,
     defaultTestLoader,
 )
-
-from numba.np.ufunc.ufuncbuilder import inspect
 
 from .test_CFL_check import TestCFLCheck
 from .test_dispersion import TestDispersion
@@ -53,6 +52,9 @@ if __name__ == "__main__":
         print(
             f"::notice file={inspect.getfile(case.__class__)},title={str(case)} ... skipped::{reason}"
         )
+    print(
+        "::warning file=app.js,line=1,col=5,endColumn=7,title=YOUR-TITLE::Missing semicolon"
+    )
 
     if not results.wasSuccessful():
         sys.exit(-1)
