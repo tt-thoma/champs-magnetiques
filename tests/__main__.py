@@ -27,9 +27,8 @@ if TYPE_CHECKING:
 
 class GitHubTestResult(TextTestResult):
     def startTest(self, test: unittest.case.TestCase) -> None:
-        self.stream.write(f"::group::{self.getDescription(test)}")
+        self.stream.write(f"::group::{self.getDescription(test)}\n")
         super().startTest(test)
-        self.stream.write("\n::endgroup::")
         self.stream.flush()
 
     def addError(self, test: unittest.case.TestCase, err: "OptExcInfo") -> None:
@@ -38,12 +37,18 @@ class GitHubTestResult(TextTestResult):
             file = err[1]
         else:
             pretty_err = "ERROR"
+        super().addError(test, err)
         self.stream.write(
             f"::error file={inspect.getfile(test.__class__)},col={inspect.getsourcelines(test.__class__)[1]},"
-            f"title={str(test)}::{pretty_err}"
+            f"title={str(test)}::{pretty_err}\n"
         )
+        self.stream.write("::endgroup::\n")
         self.stream.flush()
-        return super().addError(test, err)
+
+    def addSuccess(self, test: unittest.case.TestCase) -> None:
+        super().addSuccess(test)
+        self.stream.write("::endgroup::\n")
+        self.stream.flush()
 
 
 def test_suite(options: Values) -> TestSuite:
