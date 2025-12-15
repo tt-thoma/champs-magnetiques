@@ -2,6 +2,7 @@ import inspect
 import sys
 import unittest
 from optparse import OptionParser, Values
+from typing import TYPE_CHECKING
 from unittest import (
     TestCase,
     TestSuite,
@@ -9,8 +10,6 @@ from unittest import (
     TextTestRunner,
     defaultTestLoader,
 )
-
-from _typeshed import OptExcInfo
 
 from .test_CFL_check import TestCFLCheck
 from .test_dispersion import TestDispersion
@@ -20,6 +19,9 @@ from .test_world_basic import TestWorldBasic
 from .test_yee3d import TestYee3D
 from .test_yee_plane_wave_3d import TestYeePlaneWave3D
 from .test_yee_skin_depth import TestYeeSkinDepth
+
+if TYPE_CHECKING:
+    from _typeshed import OptExcInfo
 
 
 class GitHubTestResult(TextTestResult):
