@@ -172,7 +172,7 @@ class Yee3D:
             epsilon_r, sigma
         )
 
-        self.sigma = sigma or self.sigma
+        self.sigma = self.sigma if sigma is None else sigma
         self._compute_material_coefficients()
 
     def add_coil(self,
