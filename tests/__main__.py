@@ -50,11 +50,9 @@ if __name__ == "__main__":
     reason: str
     for case, reason in results.skipped:
         print(
-            f"::notice file={inspect.getfile(case.__class__)},title={str(case)} ... skipped::{reason}"
+            f"::notice file={inspect.getfile(case.__class__)},col={inspect.getsourcelines(case)[1]},"
+            f"title={str(case)} ... skipped::{reason}"
         )
-    print(
-        "::warning file=app.js,line=1,col=5,endColumn=7,title=YOUR-TITLE::Missing semicolon"
-    )
 
     if not results.wasSuccessful():
         sys.exit(-1)
