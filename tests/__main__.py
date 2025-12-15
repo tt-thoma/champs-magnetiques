@@ -32,16 +32,16 @@ class GitHubTestResult(TextTestResult):
         self.stream.flush()
 
     def addError(self, test: unittest.case.TestCase, err: "OptExcInfo") -> None:
-        if err[0] is not None:
-            pretty_err = traceback.format_exception(err[1])[-1].strip("\n")
-            file = err[1]
+        if err[1] is not None and err[1].__traceback__ is not None:
+            pretty_err: str = traceback.format_exception(err[1])[-1].strip("\n")
+            frame: traceback.FrameSummary = traceback.extract_tb(err[1].__traceback__)[-1]
+            self.stream.write(
+                f"\n::error file={frame.filename},line={frame.lineno},endLine={frame.end_lineno},col={frame.colno},"
+                f"endCol={frame.end_colno},title={str(test)}::{pretty_err}\n"
+            )
         else:
-            pretty_err = "ERROR"
+            self.stream.write(f"\n::error title={str(test)}::ERROR\n")
         super().addError(test, err)
-        self.stream.write(
-            f"::error file={inspect.getfile(test.__class__)},col={inspect.getsourcelines(test.__class__)[1]},"
-            f"title={str(test)}::{pretty_err}\n"
-        )
         self.stream.write("::endgroup::\n")
         self.stream.flush()
 
