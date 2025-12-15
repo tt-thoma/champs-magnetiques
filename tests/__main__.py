@@ -107,7 +107,7 @@ if __name__ == "__main__":
     opts, args = parser.parse_args()
 
     runner: TextTestRunner = TextTestRunner(
-        verbosity=2, durations=0, resultclass=opts.resultclass
+        verbosity=2, durations=0, resultclass=opts.resultclass, warnings="always"
     )
     results: TextTestResult = runner.run(test_suite(opts))
 
