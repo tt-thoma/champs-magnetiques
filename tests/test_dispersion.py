@@ -3,6 +3,8 @@ import unittest
 import numpy as np
 import matplotlib.pyplot as plt
 
+from . import log
+
 
 class TestDispersion(unittest.TestCase):
     def test_plane_wave_dispersion(self):
@@ -36,7 +38,7 @@ class TestDispersion(unittest.TestCase):
             k_guess = k_exact
             k_num = fsolve(dispersion_eq, k_guess)[0]
 
-            print(f"Frequency {f/1e6} MHz: k_exact = {k_exact:.4f}, k_num = {k_num:.4f}, error = {abs(k_num - k_exact)/k_exact * 100:.2f}%")
+            log(f"Frequency {f/1e6} MHz: k_exact = {k_exact:.4f}, k_num = {k_num:.4f}, error = {abs(k_num - k_exact)/k_exact * 100:.2f}%")
 
             k_numerical.append(k_num)
 
@@ -55,7 +57,7 @@ class TestDispersion(unittest.TestCase):
         plt.savefig('tests/results/dispersion_test.png', dpi=150)
         #plt.show()  # Don't show plot since it slows down tests
 
-        print("Dispersion test completed. Plot saved as dispersion_test.png")
+        log("Dispersion test completed. Plot saved as dispersion_test.png")
 
 
 if __name__ == '__main__':
