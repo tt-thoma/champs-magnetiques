@@ -1,4 +1,4 @@
-from unittest import TestCase, skip
+from unittest import TestCase, main, skip
 
 from examples.run_antenna_precise_long import main as run_antenna_precise_long
 from examples.run_antenna_test import main as run_antenna_test
@@ -27,3 +27,7 @@ class TestExamples(TestCase):
 
     def test_run_simulation(self) -> None:
         run_simulation()
+
+
+if __name__ == "__main__":
+    main()
