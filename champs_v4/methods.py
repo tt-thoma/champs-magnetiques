@@ -3,8 +3,8 @@
 # SenfinaLight, VirinasCode, tt_thoma
 
 import numpy as np
-from constants import epsilon0, mu0
-from config import int_t, float_t, range_f, ndarray_t
+from .constants import epsilon0, mu0
+from .config import int_t, float_t, range_f, ndarray_t
 
 def compute_material_coefficients(
         nx: int_t,

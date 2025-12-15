@@ -16,11 +16,9 @@ work in 3D; tests can run in 2D slices by setting one dimension to 1.
 import logging
 import math
 import numpy as np
-from typing import Optional
 
-from config import int_t, float_t, ndarray_t
-
-import methods
+from .config import int_t, float_t, ndarray_t
+from . import methods
 
 import importlib.util
 
