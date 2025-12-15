@@ -1,5 +1,14 @@
+import sys
 from optparse import OptionParser, Values
-from unittest import TestSuite, TextTestResult, TextTestRunner, defaultTestLoader
+from unittest import (
+    TestCase,
+    TestSuite,
+    TextTestResult,
+    TextTestRunner,
+    defaultTestLoader,
+)
+
+from numba.np.ufunc.ufuncbuilder import inspect
 
 from .test_CFL_check import TestCFLCheck
 from .test_dispersion import TestDispersion
@@ -37,6 +46,16 @@ if __name__ == "__main__":
 
     runner: TextTestRunner = TextTestRunner(verbosity=2, durations=0)
     results: TextTestResult = runner.run(test_suite(opts))
+
+    case: TestCase
+    reason: str
+    for case, reason in results.skipped:
+        print(
+            f"::notice file={inspect.getfile(case.__class__)},title={str(case)} ... skipped::{reason}"
+        )
+
+    if not results.wasSuccessful():
+        sys.exit(-1)
 
     # case_name: str
     # duration: int | float
