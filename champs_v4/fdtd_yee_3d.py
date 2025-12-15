@@ -21,8 +21,7 @@ import importlib.util
 
 NUMBA = importlib.util.find_spec("numba") is not None
 if NUMBA:
-    from numba import njit, prange
-
+    import numba
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +68,7 @@ class Yee3D:
     def __init__(
             self,
             nx: int, ny: int, nz: int, dx: float, dt: float,
-            *, use_numba: bool = False, pml_width: int = 10, pml_sigma_max: float = 1.0
+            *, pml_width: int = 10, pml_sigma_max: float = 1.0
     ):
         """
         Initialize a 3D Yee grid.
@@ -77,6 +76,8 @@ class Yee3D:
         dx : spatial step (assumed equal in all directions)
         dt : time step (should satisfy CFL)
         """
+        self.range = range
+
         self.nx = int(nx)
         self.ny = int(ny)
         self.nz = int(nz)
@@ -122,20 +123,6 @@ class Yee3D:
         # Derived coefficients for update (will be computed)
         self._compute_material_coefficients()
 
-        if use_numba and not NUMBA:
-            logger.warning("use_numba was enabled while the numba package has not been installed.")
-
-        # optional numba
-        self.use_numba = use_numba and NUMBA
-
-        if self.use_numba:
-            # prepare numba compiled kernels if available
-            try:
-                self._prepare_numba_kernels()
-            except Exception as err:
-                logger.error("Could not set up numba", exc_info=err)
-                self.use_numba = False
-
         # PML (simple exponential damping mask) parameters
         self.pml_width = int(pml_width)
         self.pml_sigma_max = float(pml_sigma_max)
@@ -154,9 +141,9 @@ class Yee3D:
         epsilon_Ex = np.zeros_like(self.Ex)
         sigma_Ex = np.zeros_like(self.Ex)
 
-        for x in range(self.nx):
-            for y in range(self.ny + 1):
-                for z in range(self.nz + 1):
+        for x in self.range(self.nx):
+            for y in self.range(self.ny + 1):
+                for z in self.range(self.nz + 1):
                     # neighbors cell indices (clamp)
                     x_left = min(max(x, 0), self.nx - 1)
                     y_top = min(max(y - 1, 0), self.ny - 1)
@@ -177,9 +164,9 @@ class Yee3D:
 
         epsilon_Ey = np.zeros_like(self.Ey)
         sigma_Ey = np.zeros_like(self.Ey)
-        for x in range(self.nx + 1):
-            for y in range(self.ny):
-                for z in range(self.nz + 1):
+        for x in self.range(self.nx + 1):
+            for y in self.range(self.ny):
+                for z in self.range(self.nz + 1):
                     x_left = min(max(x - 1, 0), self.nx - 1)
                     y_top = min(max(y, 0), self.ny - 1)
                     z_back = min(max(z - 1, 0), self.nz - 1)
@@ -197,9 +184,9 @@ class Yee3D:
 
         epsilon_Ez = np.zeros_like(self.Ez)
         sigma_Ez = np.zeros_like(self.Ez)
-        for x in range(self.nx + 1):
-            for y in range(self.ny + 1):
-                for z in range(self.nz):
+        for x in self.range(self.nx + 1):
+            for y in self.range(self.ny + 1):
+                for z in self.range(self.nz):
                     x_left = min(max(x - 1, 0), self.nx - 1)
                     y_top = min(max(y - 1, 0), self.ny - 1)
                     z_back = min(max(z, 0), self.nz - 1)
@@ -255,9 +242,9 @@ class Yee3D:
         ix0, iy0, iz0 = int(cx), int(cy), int(cz)
 
         # use Jz for axis == 'z', etc.
-        for i in range(self.nx):
-            for j in range(self.ny):
-                for k in range(self.nz):
+        for i in self.range(self.nx):
+            for j in self.range(self.ny):
+                for k in self.range(self.nz):
                     # distance in perpendicular plane
                     if axis == 'z':
                         dx = i - ix0
@@ -381,10 +368,6 @@ class Yee3D:
         nx, ny, nz = self.nx, self.ny, self.nz
 
         if nx > 0 and ny > 1 and nz > 1:
-            curlHx = (self.Hz[0:nx, 1:ny, 1:nz] - self.Hz[0:nx, 0:ny-1, 1:nz]) / dx - (
-                self.Hy[0:nx, 1:ny, 1:nz] - self.Hy[0:nx, 1:ny, 0:nz-1]
-            ) / dx
-
             # Stable update accounting for conductivity (semi-implicit)
             eps_local = epsilon0 * self.epsilon_Ex[0:nx, 1:ny, 1:nz] + 1e-30
             sigma_local = self.sigma_Ex[0:nx, 1:ny, 1:nz]
@@ -416,10 +399,6 @@ class Yee3D:
 
         # Ey update on indices Ey[1:nx, 0:ny, 1:nz]
         if nx > 1 and ny > 0 and nz > 1:
-            curlHy = (self.Hx[1:nx, 0:ny, 1:nz] - self.Hx[1:nx, 0:ny, 0:nz-1]) / dx - (
-                self.Hz[1:nx, 0:ny, 1:nz] - self.Hz[0:nx-1, 0:ny, 1:nz]
-            ) / dx
-
             eps_local = epsilon0 * self.epsilon_Ey[1:nx, 0:ny, 1:nz] + 1e-30
             sigma_local = self.sigma_Ey[1:nx, 0:ny, 1:nz]
             alpha = (sigma_local * dt) / (2.0 * eps_local)
@@ -446,10 +425,6 @@ class Yee3D:
 
         # Ez update on indices Ez[1:nx, 1:ny, 0:nz]
         if nx > 1 and ny > 1 and nz > 0:
-            curlHz = (self.Hy[1:nx, 1:ny, 0:nz] - self.Hy[0:nx-1, 1:ny, 0:nz]) / dx - (
-                self.Hx[1:nx, 1:ny, 0:nz] - self.Hx[1:nx, 0:ny-1, 0:nz]
-            ) / dx
-
             eps_local = epsilon0 * self.epsilon_Ez[1:nx, 1:ny, 0:nz] + 1e-30
             sigma_local = self.sigma_Ez[1:nx, 1:ny, 0:nz]
             alpha = (sigma_local * dt) / (2.0 * eps_local)
@@ -475,11 +450,6 @@ class Yee3D:
             rhs = (curlHz_eff - self.Jz[1:nx, 1:ny, 0:nz]) * (dt / eps_local)
             self.Ez[1:nx, 1:ny, 0:nz] = (numer_factor * self.Ez[1:nx, 1:ny, 0:nz] + rhs) / denom
 
-    def _prepare_numba_kernels(self):
-        # Placeholder: for larger grids we would implement numba-compiled loops
-        # to update H and E. For now we leave it as potential extension.
-        pass
-
     def _init_pml(self):
         """
         Initialize simple exponential damping masks for E and H fields.
@@ -497,7 +467,7 @@ class Yee3D:
                 return s
             # limit local width to at most half the axis length
             w_local = min(w, L // 2)
-            for idx in range(w_local):
+            for idx in self.range(w_local):
                 frac = (w_local - idx) / float(max(1, w_local))
                 val = (frac**2) * sigma_max
                 s[idx] = val
@@ -626,6 +596,37 @@ class Yee3D:
         self.psi_hz_dx = np.zeros_like(sigma_hz_dx)
         self.psi_hz_dy = np.zeros_like(sigma_hz_dy)
 
+
+class NumbaYee3D(Yee3D):
+    def __init__(
+            self,
+            nx: int, ny: int, nz: int, dx: float, dt: float,
+            *, pml_width: int = 10, pml_sigma_max: float = 1.0
+    ):
+        super().__init__(nx, ny, nz, dx, dt, pml_width=pml_width, pml_sigma_max=pml_sigma_max)
+        if not NUMBA:
+             raise NotImplementedError("Cannot use NumbaYee3D -- the numba package has not been installed.")
+
+
+        self.range = numba.prange
+        logger.info("Setting up numba jit.")
+        numba_methods = [
+            "_init_pml",
+            "_compute_material_coefficients",
+            "add_coil",
+            "set_materials",
+            "step"
+            "update_H",
+            "update_E",
+        ]
+        logger.debug(", ".join(numba_methods))
+
+        for method_name in numba_methods:
+            logger.debug(f"Method {methor_name}")
+            method = numba.jit(getattr(self, method_name))
+            setattr(self, method_name, method)
+
+        logger.info("Finished.")
 
 if __name__ == '__main__':
     print('Yee3D module loaded. Use from tests or scripts.')
