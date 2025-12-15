@@ -1,5 +1,6 @@
 import inspect
 import sys
+import traceback
 import unittest
 from optparse import OptionParser, Values
 from typing import TYPE_CHECKING
@@ -31,9 +32,13 @@ class GitHubTestResult(TextTestResult):
         print("::endgroup::")
 
     def addError(self, test: unittest.case.TestCase, err: OptExcInfo) -> None:
+        if err[0] is not None:
+            pretty_err = traceback.format_exception(err[1])[-1].strip("\n")
+        else:
+            pretty_err = "ERROR"
         print(
             f"::error file={inspect.getfile(test.__class__)},col={inspect.getsourcelines(test.__class__)[1]},"
-            f"title={str(test)}::{err}"
+            f"title={str(test)}::{pretty_err}"
         )
         return super().addError(test, err)
 
