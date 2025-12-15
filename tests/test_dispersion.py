@@ -53,7 +53,7 @@ class TestDispersion(unittest.TestCase):
         plt.legend()
         plt.grid(True)
         plt.savefig('tests/results/dispersion_test.png', dpi=150)
-        plt.show()
+        #plt.show()  # Don't show plot since it slows down tests
 
         print("Dispersion test completed. Plot saved as dispersion_test.png")
 
