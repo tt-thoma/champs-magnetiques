@@ -269,12 +269,15 @@ class Yee3D:
             self.nx, self.ny, self.nz,
 
             self.epsilon_Ex, self.epsilon_Ey, self.epsilon_Ez,
-
             self.sigma_Ex, self.sigma_Ey, self.sigma_Ez,
 
             self.Ex, self.Ey, self.Ez,
             self.Hx, self.Hy, self.Hz,
             self.Jx, self.Jy, self.Jz,
+
+            self.psi_hx_dy, self.psi_hx_dz,
+            self.psi_hy_dx, self.psi_hy_dz,
+            self.psi_hz_dx, self.psi_hz_dy,
 
             self.b_hx_dy, self.c_hx_dy,
             self.b_hx_dz, self.c_hx_dz,
