@@ -1,7 +1,7 @@
 import numpy as np
 
 from champs_v4.fdtd_yee_3d import Yee3D
-from champs_v4.visualization.field_slice_anim import animate_slice
+from visualization.field_slice_anim import animate_slice
 
 from . import base_dir as base
 
