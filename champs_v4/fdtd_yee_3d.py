@@ -111,6 +111,14 @@ class Yee3D:
         self.Hy = np.zeros((nx    , ny + 1, nz    ), dtype=np.float64)
         self.Hz = np.zeros((nx    , ny    , nz + 1), dtype=np.float64)
 
+        self.epsilon_Ex = None
+        self.epsilon_Ey = None
+        self.epsilon_Ez = None
+
+        self.sigma_Ex = None
+        self.sigma_Ey = None
+        self.sigma_Ez = None
+
         # material maps (cell-centered)
         self.epsilon_r = np.ones((nx, ny, nz), dtype=np.float64)
         self.sigma = np.zeros((nx, ny, nz), dtype=np.float64)
@@ -138,8 +146,8 @@ class Yee3D:
         """
 
         # create arrays for eps and sigma at E-grid shapes
-        epsilon_Ex = np.zeros_like(self.Ex)
-        sigma_Ex = np.zeros_like(self.Ex)
+        self.epsilon_Ex = np.zeros_like(self.Ex)
+        self.sigma_Ex = np.zeros_like(self.Ex)
 
         for x in self.range(self.nx):
             for y in self.range(self.ny + 1):
@@ -159,11 +167,11 @@ class Yee3D:
                                 vals_epsilon.append(self.epsilon_r[ii, jj, kk])
                                 vals_sigma.append(self.sigma[ii, jj, kk])
 
-                    epsilon_Ex[x, y, z] = np.mean(vals_epsilon)
-                    sigma_Ex[x, y, z] = np.mean(vals_sigma)
+                    self.epsilon_Ex[x, y, z] = np.mean(vals_epsilon)
+                    self.sigma_Ex[x, y, z] = np.mean(vals_sigma)
 
-        epsilon_Ey = np.zeros_like(self.Ey)
-        sigma_Ey = np.zeros_like(self.Ey)
+        self.epsilon_Ey = np.zeros_like(self.Ey)
+        self.sigma_Ey = np.zeros_like(self.Ey)
         for x in self.range(self.nx + 1):
             for y in self.range(self.ny):
                 for z in self.range(self.nz + 1):
@@ -179,11 +187,11 @@ class Yee3D:
                                 vals_epsilon.append(self.epsilon_r[ii, jj, kk])
                                 vals_sigma.append(self.sigma[ii, jj, kk])
 
-                    epsilon_Ey[x, y, z] = np.mean(vals_epsilon)
-                    sigma_Ey[x, y, z] = np.mean(vals_sigma)
+                    self.epsilon_Ey[x, y, z] = np.mean(vals_epsilon)
+                    self.sigma_Ey[x, y, z] = np.mean(vals_sigma)
 
-        epsilon_Ez = np.zeros_like(self.Ez)
-        sigma_Ez = np.zeros_like(self.Ez)
+        self.epsilon_Ez = np.zeros_like(self.Ez)
+        self.sigma_Ez = np.zeros_like(self.Ez)
         for x in self.range(self.nx + 1):
             for y in self.range(self.ny + 1):
                 for z in self.range(self.nz):
@@ -197,13 +205,13 @@ class Yee3D:
                             for kk in [z_back, min(z_back + 1, self.nz - 1)]:
                                 vals_epsilon.append(self.epsilon_r[ii, jj, kk])
                                 vals_sigma.append(self.sigma[ii, jj, kk])
-                    epsilon_Ez[x, y, z] = np.mean(vals_epsilon)
-                    sigma_Ez[x, y, z] = np.mean(vals_sigma)
+                    self.epsilon_Ez[x, y, z] = np.mean(vals_epsilon)
+                    self.sigma_Ez[x, y, z] = np.mean(vals_sigma)
 
         # Precompute update multipliers for E fields: accounting for conductivity
-        self.cex = (1.0 / (epsilon0 * epsilon_Ex)) * self.dt
-        self.cey = (1.0 / (epsilon0 * epsilon_Ey)) * self.dt
-        self.cez = (1.0 / (epsilon0 * epsilon_Ez)) * self.dt
+        self.cex = (1.0 / (epsilon0 * self.epsilon_Ex)) * self.dt
+        self.cey = (1.0 / (epsilon0 * self.epsilon_Ey)) * self.dt
+        self.cez = (1.0 / (epsilon0 * self.epsilon_Ez)) * self.dt
 
     def set_materials(self, epsilon_r: np.ndarray, sigma: Optional[np.ndarray] = None):
         """
@@ -362,7 +370,6 @@ class Yee3D:
         # E updates include conductivity and source J (at E locations)
         dt = self.dt
         dx = self.dx
-        coefH = dt / epsilon0
 
         # Ex update on indices Ex[0:nx, 1:ny, 1:nz]
         nx, ny, nz = self.nx, self.ny, self.nz
@@ -596,7 +603,6 @@ class Yee3D:
         self.psi_hz_dx = np.zeros_like(sigma_hz_dx)
         self.psi_hz_dy = np.zeros_like(sigma_hz_dy)
 
-
 class NumbaYee3D(Yee3D):
     def __init__(
             self,
@@ -607,26 +613,7 @@ class NumbaYee3D(Yee3D):
         if not NUMBA:
              raise NotImplementedError("Cannot use NumbaYee3D -- the numba package has not been installed.")
 
-
         self.range = numba.prange
-        logger.info("Setting up numba jit.")
-        numba_methods = [
-            "_init_pml",
-            "_compute_material_coefficients",
-            "add_coil",
-            "set_materials",
-            "step"
-            "update_H",
-            "update_E",
-        ]
-        logger.debug(", ".join(numba_methods))
-
-        for method_name in numba_methods:
-            logger.debug(f"Method {methor_name}")
-            method = numba.jit(getattr(self, method_name))
-            setattr(self, method_name, method)
-
-        logger.info("Finished.")
 
 if __name__ == '__main__':
     print('Yee3D module loaded. Use from tests or scripts.')

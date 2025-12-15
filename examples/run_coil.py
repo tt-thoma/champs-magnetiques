@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from champs_v4.fdtd_yee_3d import Yee3D
+from champs_v4.fdtd_yee_3d import Yee3D, NumbaYee3D
 
 from . import base_dir
 
@@ -9,7 +9,7 @@ from . import base_dir
 # This script approximates each turn by adding Jz on grid cells near the ring.
 
 
-def add_solenoid(sim: Yee3D, center, radius_cells, z0, z1, turns, current_per_turn, thickness=1):
+def add_solenoid(sim: NumbaYee3D, center, radius_cells, z0, z1, turns, current_per_turn, thickness=1):
     """
     Add a solenoid to the simulation by setting Jz on cells approximating circular loops.
     - center: (ix,iy) center in cell indices
