@@ -32,6 +32,7 @@ class GitHubTestResult(TextTestResult):
         self.stream.flush()
 
     def addError(self, test: unittest.case.TestCase, err: "OptExcInfo") -> None:
+        sys.stdout.flush()
         if err[1] is not None and err[1].__traceback__ is not None:
             pretty_err: str = traceback.format_exception(err[1])[-1].strip("\n")
             frame: traceback.FrameSummary = traceback.extract_tb(err[1].__traceback__)[-1]
@@ -46,7 +47,15 @@ class GitHubTestResult(TextTestResult):
         self.stream.flush()
 
     def addSuccess(self, test: unittest.case.TestCase) -> None:
+        sys.stdout.flush()
         super().addSuccess(test)
+        self.stream.write("::endgroup::\n")
+        self.stream.flush()
+
+    def addSkip(self, test: unittest.case.TestCase, reason: str) -> None:
+        sys.stdout.flush()
+        self.stream.write(f"\n::notice title={str(test)}::{reason}\n")
+        super().addSkip(test, reason)
         self.stream.write("::endgroup::\n")
         self.stream.flush()
 
