@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
+# SenfinaLight, VirinasCode, tt_thoma
 
 """
 Minimal 3D Yee FDTD solver (leap-frog) with support for:
@@ -16,6 +17,10 @@ import logging
 import math
 import numpy as np
 from typing import Optional
+
+from config import int_t, float_t, ndarray_t
+
+import methods
 
 import importlib.util
 
@@ -78,11 +83,12 @@ class Yee3D:
         """
         self.range = range
 
-        self.nx = int(nx)
-        self.ny = int(ny)
-        self.nz = int(nz)
-        self.dx = float(dx)
-        self.dt = float(dt)
+        self.nx: int_t = int_t(nx)
+        self.ny: int_t = int_t(ny)
+        self.nz: int_t = int_t(nz)
+
+        self.dx: float_t = float_t(dx)
+        self.dt: float_t = float_t(dt)
 
         self.psi_ex_dy = None
         self.psi_ex_dz = None
@@ -103,13 +109,13 @@ class Yee3D:
         # fields: using Yee stagger: E components centered on edges,
         # H components centered on faces. We'll store arrays sized so
         # that finite difference indexing is straightforward.
-        self.Ex = np.zeros((nx    , ny + 1, nz + 1), dtype=np.float64)
-        self.Ey = np.zeros((nx + 1, ny    , nz + 1), dtype=np.float64)
-        self.Ez = np.zeros((nx + 1, ny + 1, nz    ), dtype=np.float64)
+        self.Ex: ndarray_t = np.zeros((nx    , ny + 1, nz + 1), dtype=float_t)
+        self.Ey: ndarray_t = np.zeros((nx + 1, ny    , nz + 1), dtype=float_t)
+        self.Ez: ndarray_t = np.zeros((nx + 1, ny + 1, nz    ), dtype=float_t)
 
-        self.Hx = np.zeros((nx + 1, ny    , nz    ), dtype=np.float64)
-        self.Hy = np.zeros((nx    , ny + 1, nz    ), dtype=np.float64)
-        self.Hz = np.zeros((nx    , ny    , nz + 1), dtype=np.float64)
+        self.Hx: ndarray_t = np.zeros((nx + 1, ny    , nz    ), dtype=float_t)
+        self.Hy: ndarray_t = np.zeros((nx    , ny + 1, nz    ), dtype=float_t)
+        self.Hz: ndarray_t = np.zeros((nx    , ny    , nz + 1), dtype=float_t)
 
         self.epsilon_Ex = None
         self.epsilon_Ey = None
@@ -119,9 +125,13 @@ class Yee3D:
         self.sigma_Ey = None
         self.sigma_Ez = None
 
+        self.cex = None
+        self.cey = None
+        self.cez = None
+
         # material maps (cell-centered)
-        self.epsilon_r = np.ones((nx, ny, nz), dtype=np.float64)
-        self.sigma = np.zeros((nx, ny, nz), dtype=np.float64)
+        self.epsilon_r: ndarray_t = np.ones((nx, ny, nz), dtype=float_t)
+        self.sigma: ndarray_t = np.zeros((nx, ny, nz), dtype=float_t)
 
         # macroscopic current density on staggered grid corresponding to E
         self.Jx = np.zeros_like(self.Ex)
@@ -132,88 +142,23 @@ class Yee3D:
         self._compute_material_coefficients()
 
         # PML (simple exponential damping mask) parameters
-        self.pml_width = int(pml_width)
-        self.pml_sigma_max = float(pml_sigma_max)
+        self.pml_width = int_t(pml_width)
+        self.pml_sigma_max = float_t(pml_sigma_max)
         self._init_pml()
 
     def _compute_material_coefficients(self):
-        """
-        Computes coefficients at E locations.
-        Need epsilon and sigma at E positions.
+        (
+            self.epsilon_Ex, self.epsilon_Ey, self.epsilon_Ez,
+            self.sigma_Ex, self.sigma_Ey, self.sigma_Ez,
+            self.cex, self.cey, self.cez
+        ) = methods.compute_material_coefficients(
+            self.nx, self.ny, self.nz,
+            self.Ex, self.Ey, self.Ez,
+            self.epsilon_r, self.sigma,
+            self.dt
+        )
 
-        Note: For simplicity, interpolate cell-centered epsilon/sigma to edge locations
-        via averaging neighbor cells.
-        """
-
-        # create arrays for eps and sigma at E-grid shapes
-        self.epsilon_Ex = np.zeros_like(self.Ex)
-        self.sigma_Ex = np.zeros_like(self.Ex)
-
-        for x in self.range(self.nx):
-            for y in self.range(self.ny + 1):
-                for z in self.range(self.nz + 1):
-                    # neighbors cell indices (clamp)
-                    x_left = min(max(x, 0), self.nx - 1)
-                    y_top = min(max(y - 1, 0), self.ny - 1)
-                    z_back = min(max(z - 1, 0), self.nz - 1)
-
-                    # average over up to 4 surrounding cells
-                    vals_epsilon = []
-                    vals_sigma = []
-
-                    for ii in [x_left, min(x_left + 1, self.nx - 1)]:
-                        for jj in [y_top, min(y_top + 1, self.ny - 1)]:
-                            for kk in [z_back, min(z_back + 1, self.nz - 1)]:
-                                vals_epsilon.append(self.epsilon_r[ii, jj, kk])
-                                vals_sigma.append(self.sigma[ii, jj, kk])
-
-                    self.epsilon_Ex[x, y, z] = np.mean(vals_epsilon)
-                    self.sigma_Ex[x, y, z] = np.mean(vals_sigma)
-
-        self.epsilon_Ey = np.zeros_like(self.Ey)
-        self.sigma_Ey = np.zeros_like(self.Ey)
-        for x in self.range(self.nx + 1):
-            for y in self.range(self.ny):
-                for z in self.range(self.nz + 1):
-                    x_left = min(max(x - 1, 0), self.nx - 1)
-                    y_top = min(max(y, 0), self.ny - 1)
-                    z_back = min(max(z - 1, 0), self.nz - 1)
-                    vals_epsilon = []
-                    vals_sigma = []
-
-                    for ii in [x_left, min(x_left + 1, self.nx - 1)]:
-                        for jj in [y_top, min(y_top + 1, self.ny - 1)]:
-                            for kk in [z_back, min(z_back + 1, self.nz - 1)]:
-                                vals_epsilon.append(self.epsilon_r[ii, jj, kk])
-                                vals_sigma.append(self.sigma[ii, jj, kk])
-
-                    self.epsilon_Ey[x, y, z] = np.mean(vals_epsilon)
-                    self.sigma_Ey[x, y, z] = np.mean(vals_sigma)
-
-        self.epsilon_Ez = np.zeros_like(self.Ez)
-        self.sigma_Ez = np.zeros_like(self.Ez)
-        for x in self.range(self.nx + 1):
-            for y in self.range(self.ny + 1):
-                for z in self.range(self.nz):
-                    x_left = min(max(x - 1, 0), self.nx - 1)
-                    y_top = min(max(y - 1, 0), self.ny - 1)
-                    z_back = min(max(z, 0), self.nz - 1)
-                    vals_epsilon = []
-                    vals_sigma = []
-                    for ii in [x_left, min(x_left + 1, self.nx - 1)]:
-                        for jj in [y_top, min(y_top + 1, self.ny - 1)]:
-                            for kk in [z_back, min(z_back + 1, self.nz - 1)]:
-                                vals_epsilon.append(self.epsilon_r[ii, jj, kk])
-                                vals_sigma.append(self.sigma[ii, jj, kk])
-                    self.epsilon_Ez[x, y, z] = np.mean(vals_epsilon)
-                    self.sigma_Ez[x, y, z] = np.mean(vals_sigma)
-
-        # Precompute update multipliers for E fields: accounting for conductivity
-        self.cex = (1.0 / (epsilon0 * self.epsilon_Ex)) * self.dt
-        self.cey = (1.0 / (epsilon0 * self.epsilon_Ey)) * self.dt
-        self.cez = (1.0 / (epsilon0 * self.epsilon_Ez)) * self.dt
-
-    def set_materials(self, epsilon_r: np.ndarray, sigma: Optional[np.ndarray] = None):
+    def set_materials(self, epsilon_r: np.ndarray, sigma: ndarray_t = None):
         """
         Set material properties for the grid.
 
@@ -224,17 +169,18 @@ class Yee3D:
         Raises:
             AssertionError: If array shapes do not match (nx, ny, nz).
         """
-        assert epsilon_r.shape == (self.nx, self.ny, self.nz)
+        self.epsilon_r, sigma = methods.set_materials(
+            self.nx, self.ny, self.nz,
+            epsilon_r, sigma
+        )
 
-        self.epsilon_r = epsilon_r.astype(np.float64)
-
-        if sigma is not None:
-            assert sigma.shape == (self.nx, self.ny, self.nz)
-            self.sigma = sigma.astype(np.float64)
-
+        self.sigma = sigma or self.sigma
         self._compute_material_coefficients()
 
-    def add_coil(self, center, radius_cells, axis='z', turns=1, current=1.0):
+    def add_coil(self,
+                 center: tuple[int_t, int_t, int_t], radius_cells,
+                 *, axis: str = 'z', turns: int_t = 1, current: float_t = 1.0
+        ):
         """
         Approximate a coil (solenoid) by adding macroscopic current density J
         along axis direction distributed over the loop cells.
@@ -246,29 +192,12 @@ class Yee3D:
         current : current amplitude (A)
         """
 
-        cx, cy, cz = center
-        ix0, iy0, iz0 = int(cx), int(cy), int(cz)
-
-        # use Jz for axis == 'z', etc.
-        for i in self.range(self.nx):
-            for j in self.range(self.ny):
-                for k in self.range(self.nz):
-                    # distance in perpendicular plane
-                    if axis == 'z':
-                        dx = i - ix0
-                        dy = j - iy0
-
-                        if dx * dx + dy * dy <= radius_cells * radius_cells:
-                            # set Jz at Ez staggered positions nearby
-                            iz_idx = k
-                            if (
-                                    0 <= i < self.Ez.shape[0]
-                                    and 0 <= j < self.Ez.shape[1]
-                                    and 0 <= iz_idx < self.Ez.shape[2]
-                            ):
-                                self.Jz[i, j, iz_idx] += current * turns
-
-                    # other axes can be implemented similarly
+        self.Jz = methods.add_coil(
+            self.nx, self.ny, self.nz,
+            self.Ez, self.Jz,
+            center, radius_cells,
+            axis=axis, turns=turns, current=current
+        )
 
     def step(self):
         """
@@ -307,155 +236,59 @@ class Yee3D:
                 self.Ez *= self.dampE
 
     def update_H(self):
-        # Hx(i,j,k) += -(dt/(mu0)) * (dEz/dy - dEy/dz)
-        dt = self.dt
-        dx = self.dx
-        coef = dt / mu0
-        # compute derivatives via differences
-        # Hx update
-        # derivative dEz/dy
-        dEz_dy = (self.Ez[:-1, 1:, :] - self.Ez[:-1, :-1, :]) / dx
-        dEy_dz = (self.Ey[:-1, :, 1:] - self.Ey[:-1, :, :-1]) / dx
+        (
+            self.psi_ex_dy, self.psi_ex_dz,
+            self.psi_ey_dx, self.psi_ey_dz,
+            self.psi_ez_dx, self.psi_ez_dy,
+            self.Hx, self.Hy, self.Hz
+        ) = methods.update_H(
+            self.Ex, self.Ey, self.Ez,
+            self.Hx, self.Hy, self.Hz,
 
-        # apply CPML auxiliary psi (if initialized)
-        if self.psi_ez_dy is not None:
-            self.psi_ez_dy = self.b_ez_dy * self.psi_ez_dy + self.c_ez_dy * dEz_dy
-            dEz_eff = dEz_dy + self.psi_ez_dy
-        else:
-            dEz_eff = dEz_dy
+            self.psi_ex_dy, self.psi_ex_dz,
+            self.psi_ey_dx, self.psi_ey_dz,
+            self.psi_ez_dx, self.psi_ez_dy,
 
-        if self.psi_ey_dz is not None:
-            self.psi_ey_dz = self.b_ey_dz * self.psi_ey_dz + self.c_ey_dz * dEy_dz
-            dEy_eff = dEy_dz + self.psi_ey_dz
-        else:
-            dEy_eff = dEy_dz
+            self.b_ex_dy, self.c_ex_dy,
+            self.b_ex_dz, self.c_ex_dz,
 
-        self.Hx[:-1, :, :] += -coef * (dEz_eff - dEy_eff)
-        # Hy update
-        dEx_dz = (self.Ex[:, :-1, 1:] - self.Ex[:, :-1, :-1]) / dx
-        dEz_dx = (self.Ez[1:, :-1, :] - self.Ez[:-1, :-1, :]) / dx
+            self.b_ey_dx, self.c_ey_dx,
+            self.b_ey_dz, self.c_ey_dz,
 
-        if self.psi_ex_dz is not None:
-            self.psi_ex_dz = self.b_ex_dz * self.psi_ex_dz + self.c_ex_dz * dEx_dz
-            dEx_eff = dEx_dz + self.psi_ex_dz
-        else:
-            dEx_eff = dEx_dz
+            self.b_ez_dx, self.c_ez_dx,
+            self.b_ez_dy, self.c_ez_dy,
 
-        if self.psi_ez_dx is not None:
-            self.psi_ez_dx = self.b_ez_dx * self.psi_ez_dx + self.c_ez_dx * dEz_dx
-            dEz_eff2 = dEz_dx + self.psi_ez_dx
-        else:
-            dEz_eff2 = dEz_dx
-
-        self.Hy[:, :-1, :] += -coef * (dEx_eff - dEz_eff2)
-        # Hz update
-        dEy_dx = (self.Ey[1:, :, :-1] - self.Ey[:-1, :, :-1]) / dx
-        dEx_dy = (self.Ex[:, 1:, :-1] - self.Ex[:, :-1, :-1]) / dx
-
-        if self.psi_ey_dx is not None:
-            self.psi_ey_dx = self.b_ey_dx * self.psi_ey_dx + self.c_ey_dx * dEy_dx
-            dEy_eff2 = dEy_dx + self.psi_ey_dx
-        else:
-            dEy_eff2 = dEy_dx
-
-        if self.psi_ex_dy is not None:
-            self.psi_ex_dy = self.b_ex_dy * self.psi_ex_dy + self.c_ex_dy * dEx_dy
-            dEx_eff2 = dEx_dy + self.psi_ex_dy
-        else:
-            dEx_eff2 = dEx_dy
-
-        self.Hz[:, :, :-1] += -coef * (dEy_eff2 - dEx_eff2)
+            self.dt, self.dx
+        )
 
     def update_E(self):
-        # E updates include conductivity and source J (at E locations)
-        dt = self.dt
-        dx = self.dx
+        (
+            self.psi_hx_dy, self.psi_hx_dz,
+            self.psi_hy_dx, self.psi_hy_dz,
+            self.psi_hz_dx, self.psi_hz_dy,
+            self.Ex, self.Ey, self.Ez
+        ) = methods.update_E(
+            self.nx, self.ny, self.nz,
 
-        # Ex update on indices Ex[0:nx, 1:ny, 1:nz]
-        nx, ny, nz = self.nx, self.ny, self.nz
+            self.epsilon_Ex, self.epsilon_Ey, self.epsilon_Ez,
 
-        if nx > 0 and ny > 1 and nz > 1:
-            # Stable update accounting for conductivity (semi-implicit)
-            eps_local = epsilon0 * self.epsilon_Ex[0:nx, 1:ny, 1:nz] + 1e-30
-            sigma_local = self.sigma_Ex[0:nx, 1:ny, 1:nz]
-            alpha = (sigma_local * dt) / (2.0 * eps_local)
-            denom = 1.0 + alpha
-            numer_factor = 1.0 - alpha
+            self.sigma_Ex, self.sigma_Ey, self.sigma_Ez,
 
-            # incorporate CPML psi for derivatives of H entering Ex update
-            # dHz/dy and dHy/dz terms used in curlHx have shapes matching curlHx
-            dHz_dy = (self.Hz[0:nx, 1:ny, 1:nz] - self.Hz[0:nx, 0:ny-1, 1:nz]) / dx
-            dHy_dz = (self.Hy[0:nx, 1:ny, 1:nz] - self.Hy[0:nx, 1:ny, 0:nz-1]) / dx
+            self.Ex, self.Ey, self.Ez,
+            self.Hx, self.Hy, self.Hz,
+            self.Jx, self.Jy, self.Jz,
 
-            if self.psi_hz_dy is not None:
-                # psi_hz_dy shape should match (nx,ny,nz)
-                self.psi_hz_dy = self.b_hz_dy * self.psi_hz_dy + self.c_hz_dy * dHz_dy
-                dHz_eff = dHz_dy + self.psi_hz_dy
-            else:
-                dHz_eff = dHz_dy
+            self.b_hx_dy, self.c_hx_dy,
+            self.b_hx_dz, self.c_hx_dz,
 
-            if self.psi_hy_dz is not None:
-                self.psi_hy_dz = self.b_hy_dz * self.psi_hy_dz + self.c_hy_dz * dHy_dz
-                dHy_eff = dHy_dz + self.psi_hy_dz
-            else:
-                dHy_eff = dHy_dz
+            self.b_hy_dx, self.c_hy_dx,
+            self.b_hy_dz, self.c_hy_dz,
 
-            curlHx_eff = dHz_eff - dHy_eff
-            rhs = (curlHx_eff - self.Jx[0:nx, 1:ny, 1:nz]) * (dt / eps_local)
-            self.Ex[0:nx, 1:ny, 1:nz] = (numer_factor * self.Ex[0:nx, 1:ny, 1:nz] + rhs) / denom
+            self.b_hz_dx, self.c_hz_dx,
+            self.b_hz_dy, self.c_hz_dy,
 
-        # Ey update on indices Ey[1:nx, 0:ny, 1:nz]
-        if nx > 1 and ny > 0 and nz > 1:
-            eps_local = epsilon0 * self.epsilon_Ey[1:nx, 0:ny, 1:nz] + 1e-30
-            sigma_local = self.sigma_Ey[1:nx, 0:ny, 1:nz]
-            alpha = (sigma_local * dt) / (2.0 * eps_local)
-            denom = 1.0 + alpha
-            numer_factor = 1.0 - alpha
-
-            # include psi terms for H derivatives entering Ey
-            dHx_dz = (self.Hx[1:nx, 0:ny, 1:nz] - self.Hx[1:nx, 0:ny, 0:nz-1]) / dx
-            dHz_dx = (self.Hz[1:nx, 0:ny, 1:nz] - self.Hz[0:nx-1, 0:ny, 1:nz]) / dx
-
-            if self.psi_hx_dz is not None:
-                self.psi_hx_dz = self.b_hx_dz * self.psi_hx_dz + self.c_hx_dz * dHx_dz
-                dHx_eff = dHx_dz + self.psi_hx_dz
-            else:
-                dHx_eff = dHx_dz
-            if self.psi_hz_dx is not None:
-                self.psi_hz_dx = self.b_hz_dx * self.psi_hz_dx + self.c_hz_dx * dHz_dx
-                dHz_eff2 = dHz_dx + self.psi_hz_dx
-            else:
-                dHz_eff2 = dHz_dx
-            curlHy_eff = dHx_eff - dHz_eff2
-            rhs = (curlHy_eff - self.Jy[1:nx, 0:ny, 1:nz]) * (dt / eps_local)
-            self.Ey[1:nx, 0:ny, 1:nz] = (numer_factor * self.Ey[1:nx, 0:ny, 1:nz] + rhs) / denom
-
-        # Ez update on indices Ez[1:nx, 1:ny, 0:nz]
-        if nx > 1 and ny > 1 and nz > 0:
-            eps_local = epsilon0 * self.epsilon_Ez[1:nx, 1:ny, 0:nz] + 1e-30
-            sigma_local = self.sigma_Ez[1:nx, 1:ny, 0:nz]
-            alpha = (sigma_local * dt) / (2.0 * eps_local)
-            denom = 1.0 + alpha
-            numer_factor = 1.0 - alpha
-
-            # include H-derivative psi terms for Ez update
-            dHy_dx = (self.Hy[1:nx, 1:ny, 0:nz] - self.Hy[0:nx-1, 1:ny, 0:nz]) / dx
-            dHx_dy = (self.Hx[1:nx, 1:ny, 0:nz] - self.Hx[1:nx, 0:ny-1, 0:nz]) / dx
-
-            if self.psi_hy_dx is not None:
-                self.psi_hy_dx = self.b_hy_dx * self.psi_hy_dx + self.c_hy_dx * dHy_dx
-                dHy_eff3 = dHy_dx + self.psi_hy_dx
-            else:
-                dHy_eff3 = dHy_dx
-            if self.psi_hx_dy is not None:
-                self.psi_hx_dy = self.b_hx_dy * self.psi_hx_dy + self.c_hx_dy * dHx_dy
-                dHx_eff3 = dHx_dy + self.psi_hx_dy
-            else:
-                dHx_eff3 = dHx_dy
-
-            curlHz_eff = dHy_eff3 - dHx_eff3
-            rhs = (curlHz_eff - self.Jz[1:nx, 1:ny, 0:nz]) * (dt / eps_local)
-            self.Ez[1:nx, 1:ny, 0:nz] = (numer_factor * self.Ez[1:nx, 1:ny, 0:nz] + rhs) / denom
+            self.dt, self.dx
+        )
 
     def _init_pml(self):
         """
@@ -465,17 +298,17 @@ class Yee3D:
         CPML implementation, but effective for reducing reflections.
         """
 
-        w = max(0, int(self.pml_width))
-        sigma_max = float(self.pml_sigma_max)
+        w = max(0, int_t(self.pml_width))
+        sigma_max = float_t(self.pml_sigma_max)
 
         def axis_sigma(L):
-            s = np.zeros(L, dtype=float)
+            s = np.zeros(L, dtype=float_t)
             if w <= 0:
                 return s
             # limit local width to at most half the axis length
             w_local = min(w, L // 2)
             for idx in self.range(w_local):
-                frac = (w_local - idx) / float(max(1, w_local))
+                frac = (w_local - idx) / float_t(max(1, w_local))
                 val = (frac**2) * sigma_max
                 s[idx] = val
                 s[-1 - idx] = val
@@ -602,18 +435,6 @@ class Yee3D:
 
         self.psi_hz_dx = np.zeros_like(sigma_hz_dx)
         self.psi_hz_dy = np.zeros_like(sigma_hz_dy)
-
-class NumbaYee3D(Yee3D):
-    def __init__(
-            self,
-            nx: int, ny: int, nz: int, dx: float, dt: float,
-            *, pml_width: int = 10, pml_sigma_max: float = 1.0
-    ):
-        super().__init__(nx, ny, nz, dx, dt, pml_width=pml_width, pml_sigma_max=pml_sigma_max)
-        if not NUMBA:
-             raise NotImplementedError("Cannot use NumbaYee3D -- the numba package has not been installed.")
-
-        self.range = numba.prange
 
 if __name__ == '__main__':
     print('Yee3D module loaded. Use from tests or scripts.')

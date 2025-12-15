@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from champs_v4.fdtd_yee_3d import Yee3D, NumbaYee3D
+from champs_v4.fdtd_yee_3d import Yee3D
 
 from . import base_dir
 
