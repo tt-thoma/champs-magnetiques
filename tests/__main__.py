@@ -1,4 +1,5 @@
 import inspect
+import logging
 import sys
 import traceback
 import unittest
@@ -11,6 +12,7 @@ from unittest import (
     TextTestRunner,
     defaultTestLoader,
 )
+import warnings
 
 from .test_CFL_check import TestCFLCheck
 from .test_dispersion import TestDispersion
@@ -81,7 +83,15 @@ def test_suite(options: Values) -> TestSuite:
     return suite
 
 
+def custom(message, category, filename, lineno, line=None) -> str:
+    """Function to format a warning the standard way."""
+    return f"\n::warning file={filename},line={lineno},title={category.__name__}::{message}\n"
+
+
 if __name__ == "__main__":
+    warnings.simplefilter("always")
+    warnings.formatwarning = custom  # ty: ignore
+
     parser: OptionParser = OptionParser()
     parser.add_option("-f", "--full", action="store_true", dest="full", default=False)
     parser.add_option(
