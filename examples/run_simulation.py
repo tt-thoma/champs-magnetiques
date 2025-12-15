@@ -6,7 +6,7 @@ from champs_v4.fdtd_yee_3d import Yee3D
 from . import base_dir
 
 
-def main():
+def main(SimClass: type[Yee3D] = Yee3D):
     # Small demo: plane wave pulse propagating in x, snapshot Ez
     out_dir = base_dir / 'results'
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -18,7 +18,7 @@ def main():
     # CFL safe dt
     dt = 0.5 * dx / (c0 * np.sqrt(3))
 
-    sim = Yee3D(nx, ny, nz, dx, dt, pml_width=10, pml_sigma_max=2.0)
+    sim = SimClass(nx, ny, nz, dx, dt, pml_width=10, pml_sigma_max=2.0)
 
     # set a small region with conductivity to show skin effect optionally
     sigma = np.zeros((nx, ny, nz), dtype=float)
