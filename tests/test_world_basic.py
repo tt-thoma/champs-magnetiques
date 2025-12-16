@@ -1,14 +1,13 @@
-from unittest import main, skip, TestCase
+from unittest import TestCase, main, skip
 
 
 @skip("Ancienne simulation")
 class TestWorldBasic(TestCase):
     def test_basic(self):
-        import numpy as np
-        from world import World
-        from corps import Particle
         import constants as const
-
+        import numpy as np
+        from corps import Particle
+        from world import World
 
         # small world for quick test
         size = 0.2
@@ -18,7 +17,9 @@ class TestWorldBasic(TestCase):
 
         # add a single particle near center
         center = size / 2
-        p = Particle(center, center, center, const.charge_electron, const.masse_electron)
+        p = Particle(
+            center, center, center, const.charge_electron, const.masse_electron
+        )
         w.add_part(p)
 
         # run a few steps
@@ -26,11 +27,11 @@ class TestWorldBasic(TestCase):
             w.step_FDTD()
 
         # basic checks: fields are finite and have correct shapes
-        assert w.field_E.shape == w.field_B.shape
-        assert np.isfinite(w.field_E).all(), "field_E contains inf/nan"
-        assert np.isfinite(w.field_B).all(), "field_B contains inf/nan"
+        self.assertEqual(w.field_E.shape, w.field_B.shape)
+        self.assertTrue(np.isfinite(w.field_E).all(), "field_E contains inf/nan")
+        self.assertTrue(np.isfinite(w.field_B).all(), "field_B contains inf/nan")
         print("Basic test passed: fields finite and shapes OK")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

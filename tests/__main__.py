@@ -31,9 +31,7 @@ class GitHubTestResult(TextTestResult):
         super().startTest(test)
         self.stream.flush()
 
-    def addError(self, test: unittest.case.TestCase, err: "OptExcInfo") -> None:
-        sys.stdout.flush()
-        self.stream.flush()
+    def __error(self, test: unittest.case.TestCase, err: "OptExcInfo") -> None:
         if err[1] is not None and err[1].__traceback__ is not None:
             pretty_err: str = traceback.format_exception(err[1])[-1].strip("\n")
             frame: traceback.FrameSummary = traceback.extract_tb(err[1].__traceback__)[
@@ -45,22 +43,27 @@ class GitHubTestResult(TextTestResult):
             )
         else:
             self.stream.write(f"\n::error title={str(test)}::ERROR\n")
+
+    def addError(self, test: unittest.case.TestCase, err: "OptExcInfo") -> None:
+        self.__error(test, err)
         super().addError(test, err)
         self.stream.write("::endgroup::\n")
         self.stream.flush()
 
     def addSuccess(self, test: unittest.case.TestCase) -> None:
-        sys.stdout.flush()
-        self.stream.flush()
         super().addSuccess(test)
         self.stream.write("::endgroup::\n")
         self.stream.flush()
 
     def addSkip(self, test: unittest.case.TestCase, reason: str) -> None:
-        sys.stdout.flush()
-        self.stream.flush()
         self.stream.write(f"\n::notice title={str(test)}::{reason}\n")
         super().addSkip(test, reason)
+        self.stream.write("::endgroup::\n")
+        self.stream.flush()
+
+    def addFailure(self, test: unittest.case.TestCase, err: OptExcInfo) -> None:
+        self.__error(test, err)
+        super().addFailure(test, err)
         self.stream.write("::endgroup::\n")
         self.stream.flush()
 
@@ -106,7 +109,11 @@ if __name__ == "__main__":
     opts, args = parser.parse_args()
 
     runner: TextTestRunner = TextTestRunner(
-        verbosity=2, durations=0, resultclass=opts.resultclass, warnings="always"
+        verbosity=2,
+        durations=0,
+        resultclass=opts.resultclass,
+        warnings="always",
+        stream=sys.stdout,
     )
     results: TextTestResult = runner.run(test_suite(opts))
 

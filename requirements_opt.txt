@@ -1,2 +1,1 @@
 numba>=0.55.0  # JIT compilation
-pytest>=6.0.0  # Testing
