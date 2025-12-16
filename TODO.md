@@ -54,3 +54,11 @@ Priorité : Commencer par la stabilité (damping, CFL) et performance (Numba) po
 Dans un futur lointain :
  fusionner le modèle avec un spice ou un bem .
  
+
+
+## Tests
+
+- [x] Intégrer à GitHub
+- [ ] Supprimer la dépendance à pytest
+- [ ] Mesurer la performance (afficher sur GitHub aussi)
+- [ ] Mettre en place un système de régression : avertir si baisse de performance notoire par rapport à version précédente
