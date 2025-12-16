@@ -1,4 +1,3 @@
-from numba.core.utils import builtins
 import numpy as np
 
 from champs_v4.fdtd_yee_3d import Yee3D
@@ -7,7 +6,7 @@ from champs_v4.visualization.animation_module import create_animation
 from . import base_dir
 
 
-def main(*, print = builtins.print):
+def main():
     # Configuration pour un test rapide d'antenne
     out_dir = base_dir / 'results' / 'antenna_test'
     frames_dir = out_dir / 'frames'

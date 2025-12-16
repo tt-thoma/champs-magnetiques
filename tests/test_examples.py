@@ -7,8 +7,6 @@ from examples.run_coil_anim import main as run_coil_anim
 from examples.run_coil_slice_anim import main as run_coil_slice_anim
 from examples.run_simulation import main as run_simulation
 
-from . import log
-
 
 class TestExamples(TestCase):
     @skip("Takes too long")
@@ -16,7 +14,7 @@ class TestExamples(TestCase):
         run_antenna_precise_long()
 
     def test_run_antenna_test(self) -> None:
-        run_antenna_test(print=log)
+        run_antenna_test()
 
     def test_run_coil(self) -> None:
         run_coil()
