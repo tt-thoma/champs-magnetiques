@@ -173,6 +173,242 @@ def add_coil(
     return Jz
 
 @njit(cache=True)
+def update_H(
+        Ex: ndarray_t,
+        Ey: ndarray_t,
+        Ez: ndarray_t,
+
+        Hx: ndarray_t,
+        Hy: ndarray_t,
+        Hz: ndarray_t,
+
+        psi_ex_dy: ndarray_t,
+        psi_ex_dz: ndarray_t,
+
+        psi_ey_dx: ndarray_t,
+        psi_ey_dz: ndarray_t,
+
+        psi_ez_dx: ndarray_t,
+        psi_ez_dy: ndarray_t,
+
+        b_ex_dy, c_ex_dy,
+        b_ex_dz, c_ex_dz,
+
+        b_ey_dx, c_ey_dx,
+        b_ey_dz, c_ey_dz,
+
+        b_ez_dx, c_ez_dx,
+        b_ez_dy, c_ez_dy,
+
+        dt: float_t,
+        dx: float_t
+):
+
+    coef = dt / mu0
+
+    # compute derivatives via differences
+    # Hx update
+    # derivative dEz/dy
+    dEz_dy = (Ez[:-1, 1:, :] - Ez[:-1, :-1, :]) / dx
+    dEy_dz = (Ey[:-1, :, 1:] - Ey[:-1, :, :-1]) / dx
+
+    # apply CPML auxiliary psi (if initialized)
+    if psi_ez_dy is not None:
+        psi_ez_dy = b_ez_dy * psi_ez_dy + c_ez_dy * dEz_dy
+        dEz_eff = dEz_dy + psi_ez_dy
+    else:
+        dEz_eff = dEz_dy
+
+    if psi_ey_dz is not None:
+        psi_ey_dz = b_ey_dz * psi_ey_dz + c_ey_dz * dEy_dz
+        dEy_eff = dEy_dz + psi_ey_dz
+    else:
+        dEy_eff = dEy_dz
+
+    Hx[:-1, :, :] += -coef * (dEz_eff - dEy_eff)
+    # Hy update
+    dEx_dz = (Ex[:, :-1, 1:] - Ex[:, :-1, :-1]) / dx
+    dEz_dx = (Ez[1:, :-1, :] - Ez[:-1, :-1, :]) / dx
+
+    if psi_ex_dz is not None:
+        psi_ex_dz = b_ex_dz * psi_ex_dz + c_ex_dz * dEx_dz
+        dEx_eff = dEx_dz + psi_ex_dz
+    else:
+        dEx_eff = dEx_dz
+
+    if psi_ez_dx is not None:
+        psi_ez_dx = b_ez_dx * psi_ez_dx + c_ez_dx * dEz_dx
+        dEz_eff2 = dEz_dx + psi_ez_dx
+    else:
+        dEz_eff2 = dEz_dx
+
+    Hy[:, :-1, :] += -coef * (dEx_eff - dEz_eff2)
+    # Hz update
+    dEy_dx = (Ey[1:, :, :-1] - Ey[:-1, :, :-1]) / dx
+    dEx_dy = (Ex[:, 1:, :-1] - Ex[:, :-1, :-1]) / dx
+
+    if psi_ey_dx is not None:
+        psi_ey_dx = b_ey_dx * psi_ey_dx + c_ey_dx * dEy_dx
+        dEy_eff2 = dEy_dx + psi_ey_dx
+    else:
+        dEy_eff2 = dEy_dx
+
+    if psi_ex_dy is not None:
+        psi_ex_dy = b_ex_dy * psi_ex_dy + c_ex_dy * dEx_dy
+        dEx_eff2 = dEx_dy + psi_ex_dy
+    else:
+        dEx_eff2 = dEx_dy
+
+    Hz[:, :, :-1] += -coef * (dEy_eff2 - dEx_eff2)
+
+    return (
+        psi_ex_dy, psi_ex_dz,
+        psi_ey_dx, psi_ey_dz,
+        psi_ez_dx, psi_ez_dy,
+        Hx, Hy, Hz
+    )
+
+@njit(cache=True)
+def update_E(
+        nx: int_t,
+        ny: int_t,
+        nz: int_t,
+
+        epsilon_Ex: ndarray_t,
+        epsilon_Ey: ndarray_t,
+        epsilon_Ez: ndarray_t,
+
+        sigma_Ex: ndarray_t,
+        sigma_Ey: ndarray_t,
+        sigma_Ez: ndarray_t,
+
+        Ex: ndarray_t,
+        Ey: ndarray_t,
+        Ez: ndarray_t,
+
+        Hx: ndarray_t,
+        Hy: ndarray_t,
+        Hz: ndarray_t,
+
+        Jx: ndarray_t,
+        Jy: ndarray_t,
+        Jz: ndarray_t,
+
+        psi_hx_dy: ndarray_t,
+        psi_hx_dz: ndarray_t,
+
+        psi_hy_dx: ndarray_t,
+        psi_hy_dz: ndarray_t,
+
+        psi_hz_dx: ndarray_t,
+        psi_hz_dy: ndarray_t,
+
+        b_hx_dy, c_hx_dy,
+        b_hx_dz, c_hx_dz,
+
+        b_hy_dx, c_hy_dx,
+        b_hy_dz, c_hy_dz,
+
+        b_hz_dx, c_hz_dx,
+        b_hz_dy, c_hz_dy,
+
+        dt: float_t,
+        dx: float_t
+):
+    # E updates include conductivity and source J (at E locations)
+    # Ex update on indices Ex[0:nx, 1:ny, 1:nz)
+
+    if nx > 0 and ny > 1 and nz > 1:
+        # Stable update accounting for conductivity (semi-implicit)
+        eps_local = epsilon0 * epsilon_Ex[0:nx, 1:ny, 1:nz] + 1e-30
+        sigma_local = sigma_Ex[0:nx, 1:ny, 1:nz]
+        alpha = (sigma_local * dt) / (2.0 * eps_local)
+        denom = 1.0 + alpha
+        numer_factor = 1.0 - alpha
+
+        # incorporate CPML psi for derivatives of H entering Ex update
+        # dHz/dy and dHy/dz terms used in curlHx have shapes matching curlHx
+        dHz_dy = (Hz[0:nx, 1:ny, 1:nz] - Hz[0:nx, 0:ny-1, 1:nz]) / dx
+        dHy_dz = (Hy[0:nx, 1:ny, 1:nz] - Hy[0:nx, 1:ny, 0:nz-1]) / dx
+
+        if psi_hz_dy is not None:
+            # psi_hz_dy shape should match (nx,ny,nz)
+            psi_hz_dy = b_hz_dy * psi_hz_dy + c_hz_dy * dHz_dy
+            dHz_eff = dHz_dy + psi_hz_dy
+        else:
+            dHz_eff = dHz_dy
+
+        if psi_hy_dz is not None:
+            psi_hy_dz = b_hy_dz * psi_hy_dz + c_hy_dz * dHy_dz
+            dHy_eff = dHy_dz + psi_hy_dz
+        else:
+            dHy_eff = dHy_dz
+
+        curlHx_eff = dHz_eff - dHy_eff
+        rhs = (curlHx_eff - Jx[0:nx, 1:ny, 1:nz]) * (dt / eps_local)
+        Ex[0:nx, 1:ny, 1:nz] = (numer_factor * Ex[0:nx, 1:ny, 1:nz] + rhs) / denom
+
+    # Ey update on indices Ey[1:nx, 0:ny, 1:nz]
+    if nx > 1 and ny > 0 and nz > 1:
+        eps_local = epsilon0 * epsilon_Ey[1:nx, 0:ny, 1:nz] + 1e-30
+        sigma_local = sigma_Ey[1:nx, 0:ny, 1:nz]
+        alpha = (sigma_local * dt) / (2.0 * eps_local)
+        denom = 1.0 + alpha
+        numer_factor = 1.0 - alpha
+
+        # include psi terms for H derivatives entering Ey
+        dHx_dz = (Hx[1:nx, 0:ny, 1:nz] - Hx[1:nx, 0:ny, 0:nz-1]) / dx
+        dHz_dx = (Hz[1:nx, 0:ny, 1:nz] - Hz[0:nx-1, 0:ny, 1:nz]) / dx
+
+        if psi_hx_dz is not None:
+            psi_hx_dz = b_hx_dz * psi_hx_dz + c_hx_dz * dHx_dz
+            dHx_eff = dHx_dz + psi_hx_dz
+        else:
+            dHx_eff = dHx_dz
+        if psi_hz_dx is not None:
+            psi_hz_dx = b_hz_dx * psi_hz_dx + c_hz_dx * dHz_dx
+            dHz_eff2 = dHz_dx + psi_hz_dx
+        else:
+            dHz_eff2 = dHz_dx
+        curlHy_eff = dHx_eff - dHz_eff2
+        rhs = (curlHy_eff - Jy[1:nx, 0:ny, 1:nz]) * (dt / eps_local)
+        Ey[1:nx, 0:ny, 1:nz] = (numer_factor * Ey[1:nx, 0:ny, 1:nz] + rhs) / denom
+
+    # Ez update on indices Ez[1:nx, 1:ny, 0:nz]
+    if nx > 1 and ny > 1 and nz > 0:
+        eps_local = epsilon0 * epsilon_Ez[1:nx, 1:ny, 0:nz] + 1e-30
+        sigma_local = sigma_Ez[1:nx, 1:ny, 0:nz]
+        alpha = (sigma_local * dt) / (2.0 * eps_local)
+        denom = 1.0 + alpha
+        numer_factor = 1.0 - alpha
+
+        # include H-derivative psi terms for Ez update
+        dHy_dx = (Hy[1:nx, 1:ny, 0:nz] - Hy[0:nx-1, 1:ny, 0:nz]) / dx
+        dHx_dy = (Hx[1:nx, 1:ny, 0:nz] - Hx[1:nx, 0:ny-1, 0:nz]) / dx
+
+        if psi_hy_dx is not None:
+            psi_hy_dx = b_hy_dx * psi_hy_dx + c_hy_dx * dHy_dx
+            dHy_eff3 = dHy_dx + psi_hy_dx
+        else:
+            dHy_eff3 = dHy_dx
+        if psi_hx_dy is not None:
+            psi_hx_dy = b_hx_dy * psi_hx_dy + c_hx_dy * dHx_dy
+            dHx_eff3 = dHx_dy + psi_hx_dy
+        else:
+            dHx_eff3 = dHx_dy
+
+        curlHz_eff = dHy_eff3 - dHx_eff3
+        rhs = (curlHz_eff - Jz[1:nx, 1:ny, 0:nz]) * (dt / eps_local)
+        Ez[1:nx, 1:ny, 0:nz] = (numer_factor * Ez[1:nx, 1:ny, 0:nz] + rhs) / denom
+
+    return (
+        psi_hx_dy, psi_hx_dz,
+        psi_hy_dx, psi_hy_dz,
+        psi_hz_dx, psi_hz_dy,
+        Ex, Ey, Ez
+    )
+
+@njit(cache=True)
 def step(
         nx: int_t,
         ny: int_t,
@@ -263,65 +499,30 @@ def step(
 
         dt: float_t, dx: float_t
 ):
-    #---- BEGIN UPDATE_H ----
-    coef = dt / mu0
+    (
+        psi_ex_dy, psi_ex_dz,
+        psi_ey_dx, psi_ey_dz,
+        psi_ez_dx, psi_ez_dy,
+        Hx, Hy, Hz
+    ) = update_H(
+        Ex, Ey, Ez,
+        Hx, Hy, Hz,
 
-    # compute derivatives via differences
-    # Hx update
-    # derivative dEz/dy
-    dEz_dy = (Ez[:-1, 1:, :] - Ez[:-1, :-1, :]) / dx
-    dEy_dz = (Ey[:-1, :, 1:] - Ey[:-1, :, :-1]) / dx
+        psi_ex_dy, psi_ex_dz,
+        psi_ey_dx, psi_ey_dz,
+        psi_ez_dx, psi_ez_dy,
 
-    # apply CPML auxiliary psi (if initialized)
-    if psi_ez_dy is not None:
-        psi_ez_dy = b_ez_dy * psi_ez_dy + c_ez_dy * dEz_dy
-        dEz_eff = dEz_dy + psi_ez_dy
-    else:
-        dEz_eff = dEz_dy
+        b_ex_dy, c_ex_dy,
+        b_ex_dz, c_ex_dz,
 
-    if psi_ey_dz is not None:
-        psi_ey_dz = b_ey_dz * psi_ey_dz + c_ey_dz * dEy_dz
-        dEy_eff = dEy_dz + psi_ey_dz
-    else:
-        dEy_eff = dEy_dz
+        b_ey_dx, c_ey_dx,
+        b_ey_dz, c_ey_dz,
 
-    Hx[:-1, :, :] += -coef * (dEz_eff - dEy_eff)
-    # Hy update
-    dEx_dz = (Ex[:, :-1, 1:] - Ex[:, :-1, :-1]) / dx
-    dEz_dx = (Ez[1:, :-1, :] - Ez[:-1, :-1, :]) / dx
+        b_ez_dx, c_ez_dx,
+        b_ez_dy, c_ez_dy,
 
-    if psi_ex_dz is not None:
-        psi_ex_dz = b_ex_dz * psi_ex_dz + c_ex_dz * dEx_dz
-        dEx_eff = dEx_dz + psi_ex_dz
-    else:
-        dEx_eff = dEx_dz
-
-    if psi_ez_dx is not None:
-        psi_ez_dx = b_ez_dx * psi_ez_dx + c_ez_dx * dEz_dx
-        dEz_eff2 = dEz_dx + psi_ez_dx
-    else:
-        dEz_eff2 = dEz_dx
-
-    Hy[:, :-1, :] += -coef * (dEx_eff - dEz_eff2)
-    # Hz update
-    dEy_dx = (Ey[1:, :, :-1] - Ey[:-1, :, :-1]) / dx
-    dEx_dy = (Ex[:, 1:, :-1] - Ex[:, :-1, :-1]) / dx
-
-    if psi_ey_dx is not None:
-        psi_ey_dx = b_ey_dx * psi_ey_dx + c_ey_dx * dEy_dx
-        dEy_eff2 = dEy_dx + psi_ey_dx
-    else:
-        dEy_eff2 = dEy_dx
-
-    if psi_ex_dy is not None:
-        psi_ex_dy = b_ex_dy * psi_ex_dy + c_ex_dy * dEx_dy
-        dEx_eff2 = dEx_dy + psi_ex_dy
-    else:
-        dEx_eff2 = dEx_dy
-
-    Hz[:, :, :-1] += -coef * (dEy_eff2 - dEx_eff2)
-
-    #---- END UPDATE_H ----
+        dt, dx
+    )
 
     # apply simple H damping in PML
     if dampH_Hx is not None:
@@ -331,95 +532,36 @@ def step(
     if dampH_Hz is not None:
         Hz *= dampH_Hz
 
-    #---- BEGIN UPDATE_E ----
-    # E updates include conductivity and source J (at E locations)
-    # Ex update on indices Ex[0:nx, 1:ny, 1:nz)
+    (
+        psi_hx_dy, psi_hx_dz,
+        psi_hy_dx, psi_hy_dz,
+        psi_hz_dx, psi_hz_dy,
+        Ex, Ey, Ez
+    ) = update_E(
+        nx, ny, nz,
 
-    if nx > 0 and ny > 1 and nz > 1:
-        # Stable update accounting for conductivity (semi-implicit)
-        eps_local = epsilon0 * epsilon_Ex[0:nx, 1:ny, 1:nz] + 1e-30
-        sigma_local = sigma_Ex[0:nx, 1:ny, 1:nz]
-        alpha = (sigma_local * dt) / (2.0 * eps_local)
-        denom = 1.0 + alpha
-        numer_factor = 1.0 - alpha
+        epsilon_Ex, epsilon_Ey, epsilon_Ez,
+        sigma_Ex, sigma_Ey, sigma_Ez,
 
-        # incorporate CPML psi for derivatives of H entering Ex update
-        # dHz/dy and dHy/dz terms used in curlHx have shapes matching curlHx
-        dHz_dy = (Hz[0:nx, 1:ny, 1:nz] - Hz[0:nx, 0:ny-1, 1:nz]) / dx
-        dHy_dz = (Hy[0:nx, 1:ny, 1:nz] - Hy[0:nx, 1:ny, 0:nz-1]) / dx
+        Ex, Ey, Ez,
+        Hx, Hy, Hz,
+        Jx, Jy, Jz,
 
-        if psi_hz_dy is not None:
-            # psi_hz_dy shape should match (nx,ny,nz)
-            psi_hz_dy = b_hz_dy * psi_hz_dy + c_hz_dy * dHz_dy
-            dHz_eff = dHz_dy + psi_hz_dy
-        else:
-            dHz_eff = dHz_dy
+        psi_hx_dy, psi_hx_dz,
+        psi_hy_dx, psi_hy_dz,
+        psi_hz_dx, psi_hz_dy,
 
-        if psi_hy_dz is not None:
-            psi_hy_dz = b_hy_dz * psi_hy_dz + c_hy_dz * dHy_dz
-            dHy_eff = dHy_dz + psi_hy_dz
-        else:
-            dHy_eff = dHy_dz
+        b_hx_dy, c_hx_dy,
+        b_hx_dz, c_hx_dz,
 
-        curlHx_eff = dHz_eff - dHy_eff
-        rhs = (curlHx_eff - Jx[0:nx, 1:ny, 1:nz]) * (dt / eps_local)
-        Ex[0:nx, 1:ny, 1:nz] = (numer_factor * Ex[0:nx, 1:ny, 1:nz] + rhs) / denom
+        b_hy_dx, c_hy_dx,
+        b_hy_dz, c_hy_dz,
 
-    # Ey update on indices Ey[1:nx, 0:ny, 1:nz]
-    if nx > 1 and ny > 0 and nz > 1:
-        eps_local = epsilon0 * epsilon_Ey[1:nx, 0:ny, 1:nz] + 1e-30
-        sigma_local = sigma_Ey[1:nx, 0:ny, 1:nz]
-        alpha = (sigma_local * dt) / (2.0 * eps_local)
-        denom = 1.0 + alpha
-        numer_factor = 1.0 - alpha
+        b_hz_dx, c_hz_dx,
+        b_hz_dy, c_hz_dy,
 
-        # include psi terms for H derivatives entering Ey
-        dHx_dz = (Hx[1:nx, 0:ny, 1:nz] - Hx[1:nx, 0:ny, 0:nz-1]) / dx
-        dHz_dx = (Hz[1:nx, 0:ny, 1:nz] - Hz[0:nx-1, 0:ny, 1:nz]) / dx
-
-        if psi_hx_dz is not None:
-            psi_hx_dz = b_hx_dz * psi_hx_dz + c_hx_dz * dHx_dz
-            dHx_eff = dHx_dz + psi_hx_dz
-        else:
-            dHx_eff = dHx_dz
-        if psi_hz_dx is not None:
-            psi_hz_dx = b_hz_dx * psi_hz_dx + c_hz_dx * dHz_dx
-            dHz_eff2 = dHz_dx + psi_hz_dx
-        else:
-            dHz_eff2 = dHz_dx
-        curlHy_eff = dHx_eff - dHz_eff2
-        rhs = (curlHy_eff - Jy[1:nx, 0:ny, 1:nz]) * (dt / eps_local)
-        Ey[1:nx, 0:ny, 1:nz] = (numer_factor * Ey[1:nx, 0:ny, 1:nz] + rhs) / denom
-
-    # Ez update on indices Ez[1:nx, 1:ny, 0:nz]
-    if nx > 1 and ny > 1 and nz > 0:
-        eps_local = epsilon0 * epsilon_Ez[1:nx, 1:ny, 0:nz] + 1e-30
-        sigma_local = sigma_Ez[1:nx, 1:ny, 0:nz]
-        alpha = (sigma_local * dt) / (2.0 * eps_local)
-        denom = 1.0 + alpha
-        numer_factor = 1.0 - alpha
-
-        # include H-derivative psi terms for Ez update
-        dHy_dx = (Hy[1:nx, 1:ny, 0:nz] - Hy[0:nx-1, 1:ny, 0:nz]) / dx
-        dHx_dy = (Hx[1:nx, 1:ny, 0:nz] - Hx[1:nx, 0:ny-1, 0:nz]) / dx
-
-        if psi_hy_dx is not None:
-            psi_hy_dx = b_hy_dx * psi_hy_dx + c_hy_dx * dHy_dx
-            dHy_eff3 = dHy_dx + psi_hy_dx
-        else:
-            dHy_eff3 = dHy_dx
-        if psi_hx_dy is not None:
-            psi_hx_dy = b_hx_dy * psi_hx_dy + c_hx_dy * dHx_dy
-            dHx_eff3 = dHx_dy + psi_hx_dy
-        else:
-            dHx_eff3 = dHx_dy
-
-        curlHz_eff = dHy_eff3 - dHx_eff3
-        rhs = (curlHz_eff - Jz[1:nx, 1:ny, 0:nz]) * (dt / eps_local)
-        Ez[1:nx, 1:ny, 0:nz] = (numer_factor * Ez[1:nx, 1:ny, 0:nz] + rhs) / denom
-    #---- END UPDATE_E ----
-
-
+        dt, dx
+    )
     # apply simple E damping in PML
     if dampE is not None:
         # Ex/Ey/Ez have different shapes; apply component masks if available

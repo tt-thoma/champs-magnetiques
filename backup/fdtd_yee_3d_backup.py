@@ -267,6 +267,64 @@ class Yee3D:
             self.dt, self.dx
         )
 
+    def update_H(self):
+        (
+            self.psi_ex_dy, self.psi_ex_dz,
+            self.psi_ey_dx, self.psi_ey_dz,
+            self.psi_ez_dx, self.psi_ez_dy,
+            self.Hx, self.Hy, self.Hz
+        ) = methods.update_H(
+            self.Ex, self.Ey, self.Ez,
+            self.Hx, self.Hy, self.Hz,
+
+            self.psi_ex_dy, self.psi_ex_dz,
+            self.psi_ey_dx, self.psi_ey_dz,
+            self.psi_ez_dx, self.psi_ez_dy,
+
+            self.b_ex_dy, self.c_ex_dy,
+            self.b_ex_dz, self.c_ex_dz,
+
+            self.b_ey_dx, self.c_ey_dx,
+            self.b_ey_dz, self.c_ey_dz,
+
+            self.b_ez_dx, self.c_ez_dx,
+            self.b_ez_dy, self.c_ez_dy,
+
+            self.dt, self.dx
+        )
+
+    def update_E(self):
+        (
+            self.psi_hx_dy, self.psi_hx_dz,
+            self.psi_hy_dx, self.psi_hy_dz,
+            self.psi_hz_dx, self.psi_hz_dy,
+            self.Ex, self.Ey, self.Ez
+        ) = methods.update_E(
+            self.nx, self.ny, self.nz,
+
+            self.epsilon_Ex, self.epsilon_Ey, self.epsilon_Ez,
+            self.sigma_Ex, self.sigma_Ey, self.sigma_Ez,
+
+            self.Ex, self.Ey, self.Ez,
+            self.Hx, self.Hy, self.Hz,
+            self.Jx, self.Jy, self.Jz,
+
+            self.psi_hx_dy, self.psi_hx_dz,
+            self.psi_hy_dx, self.psi_hy_dz,
+            self.psi_hz_dx, self.psi_hz_dy,
+
+            self.b_hx_dy, self.c_hx_dy,
+            self.b_hx_dz, self.c_hx_dz,
+
+            self.b_hy_dx, self.c_hy_dx,
+            self.b_hy_dz, self.c_hy_dz,
+
+            self.b_hz_dx, self.c_hz_dx,
+            self.b_hz_dy, self.c_hz_dy,
+
+            self.dt, self.dx
+        )
+
     def _init_pml(self):
         """
         Initialize simple exponential damping masks for E and H fields.
