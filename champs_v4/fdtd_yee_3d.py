@@ -215,7 +215,15 @@ class Yee3D:
         """
         (
             self.Hx, self.Hy, self.Hz,
-            self.Ex, self.Ey, self.Ez
+            self.Ex, self.Ey, self.Ez,
+
+            self.psi_ex_dy, self.psi_ex_dz,
+            self.psi_ey_dx, self.psi_ey_dz,
+            self.psi_ez_dx, self.psi_ez_dy,
+
+            self.psi_hx_dy, self.psi_hx_dz,
+            self.psi_hy_dx, self.psi_hy_dz,
+            self.psi_hz_dx, self.psi_hz_dy
         ) = methods.step(
             self.nx, self.ny, self.nz,
 

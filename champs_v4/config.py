@@ -17,6 +17,7 @@ if NUMBA:
     logger.info("Numba found. Automatically applying it.")
 
     import numba
+
     njit = numba.njit
     range_f = numba.prange
 else:
