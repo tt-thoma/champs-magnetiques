@@ -11,6 +11,7 @@ from unittest import (
     defaultTestLoader,
 )
 
+from . import logger, ch
 from .test_CFL_check import TestCFLCheck
 from .test_dispersion import TestDispersion
 from .test_examples import TestExamples
@@ -26,6 +27,9 @@ if TYPE_CHECKING:
 
 class GitHubTestResult(TextTestResult):
     def startTest(self, test: unittest.case.TestCase) -> None:
+        logger.removeHandler(ch)
+        ch.stream = self.stream
+        logger.addHandler(ch)
         self.stream.write(f"::group::{self.getDescription(test)}\n")
         self.stream.flush()
         super().startTest(test)
