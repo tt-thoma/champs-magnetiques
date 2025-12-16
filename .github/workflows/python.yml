@@ -19,6 +19,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Cache Numba
+      id: cache-numba
+      uses: actions/cache@v4
+      with:
+        path: ./champs_v4/__pycache__
+        key: numba
     - name: Set up Python 3.14
       uses: actions/setup-python@v3
       with:
