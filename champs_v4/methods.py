@@ -6,7 +6,7 @@ import numpy as np
 from .constants import epsilon0, mu0
 from .config import int_t, float_t, range_f, ndarray_t, njit
 
-@njit(nopython=True, cache=True)
+@njit(cache=True)
 def compute_material_coefficients(
         nx: int_t,
         ny: int_t,
@@ -172,7 +172,7 @@ def add_coil(
 
     return Jz
 
-@njit(nopython=True, cache=True)
+@njit(cache=True)
 def update_H(
         Ex: ndarray_t,
         Ey: ndarray_t,
@@ -268,7 +268,7 @@ def update_H(
         Hx, Hy, Hz
     )
 
-@njit(nopython=True, cache=True)
+@njit(cache=True)
 def update_E(
         nx: int_t,
         ny: int_t,
