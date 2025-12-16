@@ -52,7 +52,7 @@ class TestYeeSkinDepth(unittest.TestCase):
         print("before slab max Ez:", max_before, "inside slab max Ez:", max_inside)
         # Expect significant attenuation inside conductor (orders of magnitude)
         self.assertGreater(max_before, 0.0, "No wave detected before slab")
-        self.assertGreater(
+        self.assertLess(
             max_inside,
             0.5 * max_before,
             f"Field inside conductor not sufficiently attenuated ({max_inside} >= 0.5*{max_before})",
