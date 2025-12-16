@@ -1,18 +1,15 @@
-import inspect
-import logging
 import sys
 import traceback
 import unittest
+import warnings
 from optparse import OptionParser, Values
 from typing import TYPE_CHECKING
 from unittest import (
-    TestCase,
     TestSuite,
     TextTestResult,
     TextTestRunner,
     defaultTestLoader,
 )
-import warnings
 
 from .test_CFL_check import TestCFLCheck
 from .test_dispersion import TestDispersion
@@ -39,7 +36,9 @@ class GitHubTestResult(TextTestResult):
         self.stream.flush()
         if err[1] is not None and err[1].__traceback__ is not None:
             pretty_err: str = traceback.format_exception(err[1])[-1].strip("\n")
-            frame: traceback.FrameSummary = traceback.extract_tb(err[1].__traceback__)[-1]
+            frame: traceback.FrameSummary = traceback.extract_tb(err[1].__traceback__)[
+                -1
+            ]
             self.stream.write(
                 f"\n::error file={frame.filename},line={frame.lineno},endLine={frame.end_lineno},col={frame.colno},"
                 f"endCol={frame.end_colno},title={str(test)}::{pretty_err}\n"
