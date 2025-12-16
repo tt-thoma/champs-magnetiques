@@ -29,6 +29,7 @@ jobs:
           ./champs_v4/visualization/__pycache__
           ./examples/__pycache__
           ./tests/__pycache__
+          ./.numba_cache
         key: numba
     - name: Set up Python 3.14
       uses: actions/setup-python@v3
@@ -41,5 +42,8 @@ jobs:
         python -m pip install -r requirements_opt.txt
         sudo apt install ffmpeg
     - name: Test
+      env:
+        NUMBA_CACHE_DIR: ./.numba_cache
+        NUMBA_DEBUG_CACHE: 1
       run: |
         python -m tests -f -g
