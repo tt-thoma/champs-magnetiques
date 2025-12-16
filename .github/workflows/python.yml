@@ -23,7 +23,11 @@ jobs:
       id: cache-numba
       uses: actions/cache@v4
       with:
-        path: ./champs_v4/__pycache__
+        path: |
+          ./champs_v4/__pycache__
+          ./champs_v4/visualization/__pycache__
+          ./examples/__pycache__
+          ./tests/__pycache__
         key: numba
     - name: Set up Python 3.14
       uses: actions/setup-python@v3
