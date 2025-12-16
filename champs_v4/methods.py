@@ -4,8 +4,9 @@
 
 import numpy as np
 from .constants import epsilon0, mu0
-from .config import int_t, float_t, range_f, ndarray_t
+from .config import int_t, float_t, range_f, ndarray_t, njit
 
+@njit(nopython=True, cache=True)
 def compute_material_coefficients(
         nx: int_t,
         ny: int_t,
@@ -41,14 +42,16 @@ def compute_material_coefficients(
                 z_back = min(max(z - 1, 0), nz - 1)
 
                 # average over up to 4 surrounding cells
-                vals_epsilon = []
-                vals_sigma = []
+                vals_epsilon = np.zeros((8,), dtype=float_t)
+                vals_sigma = np.zeros((8,), dtype=float_t)
 
+                idx = 0
                 for ii in [x_left, min(x_left + 1, nx - 1)]:
                     for jj in [y_top, min(y_top + 1, ny - 1)]:
                         for kk in [z_back, min(z_back + 1, nz - 1)]:
-                            vals_epsilon.append(epsilon_r[ii, jj, kk])
-                            vals_sigma.append(sigma[ii, jj, kk])
+                            vals_epsilon[idx] = epsilon_r[ii, jj, kk]
+                            vals_sigma[idx] = sigma[ii, jj, kk]
+                            idx += 1
 
                 epsilon_Ex[x, y, z] = np.mean(vals_epsilon)
                 sigma_Ex[x, y, z] = np.mean(vals_sigma)
@@ -62,14 +65,17 @@ def compute_material_coefficients(
                 x_left = min(max(x - 1, 0), nx - 1)
                 y_top = min(max(y, 0), ny - 1)
                 z_back = min(max(z - 1, 0), nz - 1)
-                vals_epsilon = []
-                vals_sigma = []
 
+                vals_epsilon = np.zeros((8,), dtype=float_t)
+                vals_sigma = np.zeros((8,), dtype=float_t)
+
+                idx = 0
                 for ii in [x_left, min(x_left + 1, nx - 1)]:
                     for jj in [y_top, min(y_top + 1, ny - 1)]:
                         for kk in [z_back, min(z_back + 1, nz - 1)]:
-                            vals_epsilon.append(epsilon_r[ii, jj, kk])
-                            vals_sigma.append(sigma[ii, jj, kk])
+                            vals_epsilon[idx] = epsilon_r[ii, jj, kk]
+                            vals_sigma[idx] = sigma[ii, jj, kk]
+                            idx += 1
 
                 epsilon_Ey[x, y, z] = np.mean(vals_epsilon)
                 sigma_Ey[x, y, z] = np.mean(vals_sigma)
@@ -83,13 +89,18 @@ def compute_material_coefficients(
                 x_left = min(max(x - 1, 0), nx - 1)
                 y_top = min(max(y - 1, 0), ny - 1)
                 z_back = min(max(z, 0), nz - 1)
-                vals_epsilon = []
-                vals_sigma = []
+
+                vals_epsilon = np.zeros((8,), dtype=float_t)
+                vals_sigma = np.zeros((8,), dtype=float_t)
+
+                idx = 0
                 for ii in [x_left, min(x_left + 1, nx - 1)]:
                     for jj in [y_top, min(y_top + 1, ny - 1)]:
                         for kk in [z_back, min(z_back + 1, nz - 1)]:
-                            vals_epsilon.append(epsilon_r[ii, jj, kk])
-                            vals_sigma.append(sigma[ii, jj, kk])
+                            vals_epsilon[idx] = epsilon_r[ii, jj, kk]
+                            vals_sigma[idx] = sigma[ii, jj, kk]
+                            idx += 1
+
                 epsilon_Ez[x, y, z] = np.mean(vals_epsilon)
                 sigma_Ez[x, y, z] = np.mean(vals_sigma)
 
@@ -104,6 +115,7 @@ def compute_material_coefficients(
         cex, cey, cez
     )
 
+# @njit
 def set_materials(
         nx: int_t,
         ny: int_t,
@@ -112,16 +124,14 @@ def set_materials(
         epsilon_r: ndarray_t,
         sigma: ndarray_t = None
 ):
-    assert epsilon_r.shape == (nx, ny, nz)
-
     epsilon_r = epsilon_r.astype(float_t)
 
     if sigma is not None:
-        assert sigma.shape == (nx, ny, nz)
         sigma = sigma.astype(float_t)
 
     return epsilon_r, sigma
 
+# @njit
 def add_coil(
         nx: int_t,
         ny: int_t,
@@ -138,10 +148,6 @@ def add_coil(
         turns: int_t = 1,
         current: float_t = 1.0
 ):
-    assert axis in ("x", "y", "z")
-    if axis != "z":
-        raise NotImplementedError
-
     cx, cy, cz = center
     ix0, iy0, iz0 = int_t(cx), int_t(cy), int_t(cz)
 
@@ -166,6 +172,7 @@ def add_coil(
 
     return Jz
 
+@njit(nopython=True, cache=True)
 def update_H(
         Ex: ndarray_t,
         Ey: ndarray_t,
@@ -261,6 +268,7 @@ def update_H(
         Hx, Hy, Hz
     )
 
+@njit(nopython=True, cache=True)
 def update_E(
         nx: int_t,
         ny: int_t,

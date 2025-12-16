@@ -20,12 +20,6 @@ import numpy as np
 from .config import int_t, float_t, ndarray_t
 from . import methods
 
-import importlib.util
-
-NUMBA = importlib.util.find_spec("numba") is not None
-if NUMBA:
-    import numba
-
 logger = logging.getLogger(__name__)
 
 # Physical constants
@@ -79,6 +73,7 @@ class Yee3D:
         dx : spatial step (assumed equal in all directions)
         dt : time step (should satisfy CFL)
         """
+        logger.info("Initializing Yee3D instance")
         self.range = range
 
         self.nx: int_t = int_t(nx)
@@ -143,8 +138,10 @@ class Yee3D:
         self.pml_width = int_t(pml_width)
         self.pml_sigma_max = float_t(pml_sigma_max)
         self._init_pml()
+        logger.info("Finished initializing instance")
 
     def _compute_material_coefficients(self):
+        logger.info("Computing materials")
         (
             self.epsilon_Ex, self.epsilon_Ey, self.epsilon_Ez,
             self.sigma_Ex, self.sigma_Ey, self.sigma_Ez,
@@ -155,6 +152,7 @@ class Yee3D:
             self.epsilon_r, self.sigma,
             self.dt
         )
+        logger.info("Finished computing materials")
 
     def set_materials(self, epsilon_r: np.ndarray, sigma: ndarray_t = None):
         """
@@ -167,6 +165,11 @@ class Yee3D:
         Raises:
             AssertionError: If array shapes do not match (nx, ny, nz).
         """
+        logger.info("Setting material")
+        assert epsilon_r.shape == (self.nx, self.ny, self.nz)
+        if sigma is not None:
+            assert sigma.shape == (self.nx, self.ny, self.nz)
+
         self.epsilon_r, sigma = methods.set_materials(
             self.nx, self.ny, self.nz,
             epsilon_r, sigma
@@ -174,6 +177,7 @@ class Yee3D:
 
         self.sigma = self.sigma if sigma is None else sigma
         self._compute_material_coefficients()
+        logger.info("Finished setting material")
 
     def add_coil(self,
                  center: tuple[int_t, int_t, int_t], radius_cells,
@@ -189,6 +193,10 @@ class Yee3D:
         turns : number of turns (multiplicative factor)
         current : current amplitude (A)
         """
+        logger.info("Adding coil")
+        assert axis in ("x", "y", "z")
+        if axis != "z":
+            raise NotImplementedError
 
         self.Jz = methods.add_coil(
             self.nx, self.ny, self.nz,
@@ -196,6 +204,7 @@ class Yee3D:
             center, radius_cells,
             axis=axis, turns=turns, current=current
         )
+        logger.info("Finished adding coil")
 
     def step(self):
         """
@@ -298,7 +307,7 @@ class Yee3D:
         damping mask near boundaries to absorb outgoing waves. Not a full
         CPML implementation, but effective for reducing reflections.
         """
-
+        logger.info("Initializing PML")
         w = max(0, int_t(self.pml_width))
         sigma_max = float_t(self.pml_sigma_max)
 
@@ -436,6 +445,7 @@ class Yee3D:
 
         self.psi_hz_dx = np.zeros_like(sigma_hz_dx)
         self.psi_hz_dy = np.zeros_like(sigma_hz_dy)
+        logger.info("Finished initializing PML")
 
 if __name__ == '__main__':
     print('Yee3D module loaded. Use from tests or scripts.')
