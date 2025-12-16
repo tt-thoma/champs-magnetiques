@@ -39,6 +39,7 @@ jobs:
       run: |
         ls -la ./.numba_cache
         ls -la ./.numba_cache/*/
+        python -m pickle ./.numba_cache/champs_v4_6eba136648b986623d42d8b93aeacb9d7f99f9e1/methods.compute_material_coefficients-9.py314.nbi
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -51,3 +52,9 @@ jobs:
         NUMBA_DEBUG_CACHE: 1
       run: |
         python -m tests -f -g
+    - name: Huhh
+      run: |
+        ls -la ./.numba_cache
+        ls -la ./.numba_cache/*/
+        python -m pickle ./.numba_cache/champs_v4_6eba136648b986623d42d8b93aeacb9d7f99f9e1/methods.compute_material_coefficients-9.py314.nbi
+    
