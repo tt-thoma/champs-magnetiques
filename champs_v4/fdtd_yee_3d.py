@@ -213,34 +213,51 @@ class Yee3D:
         Updates magnetic fields (H) first, then electric fields (E). Applies PML damping
         to both field types if configured. Current sources (J) are incorporated in E updates.
         """
-        self.update_H()
+        (
+            self.Hx, self.Hy, self.Hz,
+            self.Ex, self.Ey, self.Ez
+        ) = methods.step(
+            self.nx, self.ny, self.nz,
 
-        # apply simple H damping in PML
-        if self.dampH_Hx is not None:
-            self.Hx *= self.dampH_Hx
-        if self.dampH_Hy  is not None:
-            self.Hy *= self.dampH_Hy
-        if self.dampH_Hz is not None:
-            self.Hz *= self.dampH_Hz
+            self.Ex, self.Ey, self.Ez,
+            self.Hx, self.Hy, self.Hz,
+            self.Jx, self.Jy, self.Jz,
 
-        self.update_E()
-        # apply simple E damping in PML
-        if self.dampE is not None:
-            # Ex/Ey/Ez have different shapes; apply component masks if available
-            if self.dampE_Ex is not None:
-                self.Ex *= self.dampE_Ex
-            else:
-                self.Ex *= self.dampE
+            self.dampE, self.dampE_Ex, self.dampE_Ey, self.dampE_Ez,
 
-            if self.dampE_Ey is not None:
-                self.Ey *= self.dampE_Ey
-            else:
-                self.Ey *= self.dampE
+            self.epsilon_Ex, self.epsilon_Ey, self.epsilon_Ez,
+            self.sigma_Ex, self.sigma_Ey, self.sigma_Ez,
 
-            if self.dampE_Ez is not None:
-                self.Ez *= self.dampE_Ez
-            else:
-                self.Ez *= self.dampE
+            self.psi_ex_dy, self.psi_ex_dz,
+            self.psi_ey_dx, self.psi_ey_dz,
+            self.psi_ez_dx, self.psi_ez_dy,
+
+            self.b_ex_dy, self.c_ex_dy,
+            self.b_ex_dz, self.c_ex_dz,
+
+            self.b_ey_dx, self.c_ey_dx,
+            self.b_ey_dz, self.c_ey_dz,
+
+            self.b_ez_dx, self.c_ez_dx,
+            self.b_ez_dy, self.c_ez_dy,
+
+            self.psi_hx_dy, self.psi_hx_dz,
+            self.psi_hy_dx, self.psi_hy_dz,
+            self.psi_hz_dx, self.psi_hz_dy,
+
+            self.b_hx_dy, self.c_hx_dy,
+            self.b_hx_dz, self.c_hx_dz,
+
+            self.b_hy_dx, self.c_hy_dx,
+            self.b_hy_dz, self.c_hy_dz,
+
+            self.b_hz_dx, self.c_hz_dx,
+            self.b_hz_dy, self.c_hz_dy,
+
+            self.dampH_Hx, self.dampH_Hy, self.dampH_Hz,
+
+            self.dt, self.dx
+        )
 
     def update_H(self):
         (

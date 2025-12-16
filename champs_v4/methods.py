@@ -6,7 +6,7 @@ import numpy as np
 from .constants import epsilon0, mu0
 from .config import int_t, float_t, range_f, ndarray_t, njit
 
-@njit(nopython=True, cache=True)
+@njit(cache=True)
 def compute_material_coefficients(
         nx: int_t,
         ny: int_t,
@@ -172,7 +172,7 @@ def add_coil(
 
     return Jz
 
-@njit(nopython=True, cache=True)
+@njit(cache=True)
 def update_H(
         Ex: ndarray_t,
         Ey: ndarray_t,
@@ -268,7 +268,7 @@ def update_H(
         Hx, Hy, Hz
     )
 
-@njit(nopython=True, cache=True)
+@njit(cache=True)
 def update_E(
         nx: int_t,
         ny: int_t,
@@ -406,4 +406,181 @@ def update_E(
         psi_hy_dx, psi_hy_dz,
         psi_hz_dx, psi_hz_dy,
         Ex, Ey, Ez
+    )
+
+@njit(cache=True)
+def step(
+        nx: int_t,
+        ny: int_t,
+        nz: int_t,
+
+        Ex: ndarray_t,
+        Ey: ndarray_t,
+        Ez: ndarray_t,
+
+        Hx: ndarray_t,
+        Hy: ndarray_t,
+        Hz: ndarray_t,
+
+        Jx: ndarray_t,
+        Jy: ndarray_t,
+        Jz: ndarray_t,
+
+        dampE: ndarray_t,
+        dampE_Ex: ndarray_t,
+        dampE_Ey: ndarray_t,
+        dampE_Ez: ndarray_t,
+
+        epsilon_Ex: ndarray_t,
+        epsilon_Ey: ndarray_t,
+        epsilon_Ez: ndarray_t,
+
+        sigma_Ex: ndarray_t,
+        sigma_Ey: ndarray_t,
+        sigma_Ez: ndarray_t,
+
+        psi_ex_dy: ndarray_t,
+        psi_ex_dz: ndarray_t,
+
+        psi_ey_dx: ndarray_t,
+        psi_ey_dz: ndarray_t,
+
+        psi_ez_dx: ndarray_t,
+        psi_ez_dy: ndarray_t,
+
+        b_ex_dy: ndarray_t,
+        c_ex_dy: ndarray_t,
+
+        b_ex_dz: ndarray_t,
+        c_ex_dz: ndarray_t,
+
+        b_ey_dx: ndarray_t,
+        c_ey_dx: ndarray_t,
+
+        b_ey_dz: ndarray_t,
+        c_ey_dz: ndarray_t,
+
+        b_ez_dx: ndarray_t,
+        c_ez_dx: ndarray_t,
+
+        b_ez_dy: ndarray_t,
+        c_ez_dy: ndarray_t,
+
+        psi_hx_dy: ndarray_t,
+        psi_hx_dz: ndarray_t,
+
+        psi_hy_dx: ndarray_t,
+        psi_hy_dz: ndarray_t,
+
+        psi_hz_dx: ndarray_t,
+        psi_hz_dy: ndarray_t,
+
+        b_hx_dy: ndarray_t,
+        c_hx_dy: ndarray_t,
+
+        b_hx_dz: ndarray_t,
+        c_hx_dz: ndarray_t,
+
+        b_hy_dx: ndarray_t,
+        c_hy_dx: ndarray_t,
+
+        b_hy_dz: ndarray_t,
+        c_hy_dz: ndarray_t,
+
+        b_hz_dx: ndarray_t,
+        c_hz_dx: ndarray_t,
+
+        b_hz_dy: ndarray_t,
+        c_hz_dy: ndarray_t,
+
+        dampH_Hx: ndarray_t,
+        dampH_Hy: ndarray_t,
+        dampH_Hz: ndarray_t,
+
+        dt: float_t, dx: float_t
+):
+    (
+        psi_ex_dy, psi_ex_dz,
+        psi_ey_dx, psi_ey_dz,
+        psi_ez_dx, psi_ez_dy,
+        Hx, Hy, Hz
+    ) = update_H(
+        Ex, Ey, Ez,
+        Hx, Hy, Hz,
+
+        psi_ex_dy, psi_ex_dz,
+        psi_ey_dx, psi_ey_dz,
+        psi_ez_dx, psi_ez_dy,
+
+        b_ex_dy, c_ex_dy,
+        b_ex_dz, c_ex_dz,
+
+        b_ey_dx, c_ey_dx,
+        b_ey_dz, c_ey_dz,
+
+        b_ez_dx, c_ez_dx,
+        b_ez_dy, c_ez_dy,
+
+        dt, dx
+    )
+
+    # apply simple H damping in PML
+    if dampH_Hx is not None:
+        Hx *= dampH_Hx
+    if dampH_Hy is not None:
+        Hy *= dampH_Hy
+    if dampH_Hz is not None:
+        Hz *= dampH_Hz
+
+    (
+        psi_hx_dy, psi_hx_dz,
+        psi_hy_dx, psi_hy_dz,
+        psi_hz_dx, psi_hz_dy,
+        Ex, Ey, Ez
+    ) = update_E(
+        nx, ny, nz,
+
+        epsilon_Ex, epsilon_Ey, epsilon_Ez,
+        sigma_Ex, sigma_Ey, sigma_Ez,
+
+        Ex, Ey, Ez,
+        Hx, Hy, Hz,
+        Jx, Jy, Jz,
+
+        psi_hx_dy, psi_hx_dz,
+        psi_hy_dx, psi_hy_dz,
+        psi_hz_dx, psi_hz_dy,
+
+        b_hx_dy, c_hx_dy,
+        b_hx_dz, c_hx_dz,
+
+        b_hy_dx, c_hy_dx,
+        b_hy_dz, c_hy_dz,
+
+        b_hz_dx, c_hz_dx,
+        b_hz_dy, c_hz_dy,
+
+        dt, dx
+    )
+    # apply simple E damping in PML
+    if dampE is not None:
+        # Ex/Ey/Ez have different shapes; apply component masks if available
+        if dampE_Ex is not None:
+            Ex *= dampE_Ex
+        else:
+            Ex *= dampE
+
+        if dampE_Ey is not None:
+            Ey *= dampE_Ey
+        else:
+            Ey *= dampE
+
+        if dampE_Ez is not None:
+            Ez *= dampE_Ez
+        else:
+            Ez *= dampE
+
+    return (
+        Hx, Hy, Hz,
+        Ex, Ey, Ez,
     )
