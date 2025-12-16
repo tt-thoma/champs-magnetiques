@@ -1,16 +1,17 @@
-from unittest import main, skip, TestCase
+from unittest import TestCase, main, skip
 
 
 @skip("Ancienne simulation")
 class TestPhysicalConsistency(TestCase):
     def test_physical(self) -> None:
         import sys
-        import numpy as np
-        sys.path.insert(0, r'c:\Espace de programation\champs-magnetiques\champs_v4')
-        from world import World
-        from corps import Particle
-        import constants as const
 
+        import numpy as np
+
+        sys.path.insert(0, r"c:\Espace de programation\champs-magnetiques\champs_v4")
+        import constants as const
+        from corps import Particle
+        from world import World
 
         def curl_field(field, cell_size):
             # compute curl for vector field with centered differences and periodicity
@@ -38,7 +39,9 @@ class TestPhysicalConsistency(TestCase):
 
         # add a particle off-center so J may be nonzero when moving
         center = size / 2
-        p = Particle(center + 0.01, center, center, const.charge_electron, const.masse_electron)
+        p = Particle(
+            center + 0.01, center, center, const.charge_electron, const.masse_electron
+        )
         p.vx = 0.0
         p.vy = 0.0
         p.vz = 0.0
@@ -76,10 +79,12 @@ class TestPhysicalConsistency(TestCase):
         print(f"Max Ampere-Maxwell residual: {max_ampe:.3e}")
 
         # Tolerances are loose because of discrete differencing and eps handling
-        assert max_faraday < 1e-6, f"Faraday residual too large: {max_faraday}"
-        assert max_ampe < 1e-6, f"Ampere-Maxwell residual too large: {max_ampe}"
+        self.assertLess(max_faraday, 1e-6, f"Faraday residual too large: {max_faraday}")
+        self.assertLess(
+            max_ampe, 1e-6, f"Ampere-Maxwell residual too large: {max_ampe}"
+        )
         print("Physical consistency test passed")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

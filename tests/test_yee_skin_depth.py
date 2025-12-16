@@ -1,6 +1,5 @@
-import unittest
-
 import math
+import unittest
 
 import numpy as np
 
@@ -17,7 +16,7 @@ class TestYeeSkinDepth(unittest.TestCase):
         # create a conductor slab in the middle with sigma large
         sigma = np.zeros((nx, ny, nz))
         slab_start = 40
-        sigma[slab_start:slab_start+10, :, :] = 1e7  # high conductivity
+        sigma[slab_start : slab_start + 10, :, :] = 1e7  # high conductivity
         sim.set_materials(np.ones((nx, ny, nz)), sigma)
 
         # source at i=5
@@ -50,12 +49,16 @@ class TestYeeSkinDepth(unittest.TestCase):
                 if inside_val > max_inside:
                     max_inside = inside_val
 
-        print('before slab max Ez:', max_before, 'inside slab max Ez:', max_inside)
+        print("before slab max Ez:", max_before, "inside slab max Ez:", max_inside)
         # Expect significant attenuation inside conductor (orders of magnitude)
-        assert max_before > 0.0, 'No wave detected before slab'
-        assert max_inside < 0.5 * max_before, f'Field inside conductor not sufficiently attenuated ({max_inside} >= 0.5*{max_before})'
-        print('Skin depth test passed')
+        self.assertGreater(max_before, 0.0, "No wave detected before slab")
+        self.assertGreater(
+            max_inside,
+            0.5 * max_before,
+            f"Field inside conductor not sufficiently attenuated ({max_inside} >= 0.5*{max_before})",
+        )
+        print("Skin depth test passed")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

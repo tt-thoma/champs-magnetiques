@@ -1,7 +1,6 @@
 import unittest
 
 import numpy as np
-import pytest
 
 from champs_v4.fdtd_yee_3d import Yee3D
 
@@ -16,24 +15,24 @@ class TestYee3D(unittest.TestCase):
         dt = dx / (3e8 * np.sqrt(3)) * 0.9  # Safe CFL
         sim = Yee3D(nx, ny, nz, dx, dt)
 
-        assert sim.nx == nx
-        assert sim.ny == ny
-        assert sim.nz == nz
-        assert sim.dx == dx
-        assert sim.dt == dt
+        self.assertEqual(sim.nx, nx)
+        self.assertEqual(sim.ny, ny)
+        self.assertEqual(sim.nz, nz)
+        self.assertEqual(sim.dx, dx)
+        self.assertEqual(sim.dt, dt)
 
         # Check field shapes
-        assert sim.Ex.shape == (nx, ny + 1, nz + 1)
-        assert sim.Ey.shape == (nx + 1, ny, nz + 1)
-        assert sim.Ez.shape == (nx + 1, ny + 1, nz)
-        assert sim.Hx.shape == (nx + 1, ny, nz)
-        assert sim.Hy.shape == (nx, ny + 1, nz)
-        assert sim.Hz.shape == (nx, ny, nz + 1)
+        self.assertEqual(sim.Ex.shape, (nx, ny + 1, nz + 1))
+        self.assertEqual(sim.Ey.shape, (nx + 1, ny, nz + 1))
+        self.assertEqual(sim.Ez.shape, (nx + 1, ny + 1, nz))
+        self.assertEqual(sim.Hx.shape, (nx + 1, ny, nz))
+        self.assertEqual(sim.Hy.shape, (nx, ny + 1, nz))
+        self.assertEqual(sim.Hz.shape, (nx, ny, nz + 1))
 
         # Check materials
-        assert sim.epsilon_r.shape == (nx, ny, nz)
-        assert np.allclose(sim.epsilon_r, 1.0)
-        assert np.allclose(sim.sigma, 0.0)
+        self.assertEqual(sim.epsilon_r.shape, (nx, ny, nz))
+        self.assertTrue(np.allclose(sim.epsilon_r, 1.0))
+        self.assertTrue(np.allclose(sim.sigma, 0.0))
 
     def test_set_materials(self):
         """Test material setting."""
@@ -46,11 +45,11 @@ class TestYee3D(unittest.TestCase):
         sigma = np.full((nx, ny, nz), 1e-3)
         sim.set_materials(epsilon_r, sigma)
 
-        assert np.allclose(sim.epsilon_r, 4.0)
-        assert np.allclose(sim.sigma, 1e-3)
+        self.assertTrue(np.allclose(sim.epsilon_r, 4.0))
+        self.assertTrue(np.allclose(sim.sigma, 1e-3))
 
         # Test invalid shapes
-        with pytest.raises(AssertionError):
+        with self.assertRaises(AssertionError):
             sim.set_materials(np.ones((nx + 1, ny, nz)))
 
     def test_step_stability(self):
@@ -70,17 +69,17 @@ class TestYee3D(unittest.TestCase):
             sim.step()
 
         # Fields should have changed (unless perfectly symmetric)
-        assert not np.allclose(sim.Ex, Ex0) or np.allclose(sim.Ex, 0)
-        assert not np.allclose(sim.Ey, Ey0) or np.allclose(sim.Ey, 0)
-        assert not np.allclose(sim.Ez, Ez0) or np.allclose(sim.Ez, 0)
+        self.assertTrue(not np.allclose(sim.Ex, Ex0) or np.allclose(sim.Ex, 0))
+        self.assertTrue(not np.allclose(sim.Ey, Ey0) or np.allclose(sim.Ey, 0))
+        self.assertTrue(not np.allclose(sim.Ez, Ez0) or np.allclose(sim.Ez, 0))
 
         # Check finiteness
-        assert np.isfinite(sim.Ex).all()
-        assert np.isfinite(sim.Ey).all()
-        assert np.isfinite(sim.Ez).all()
-        assert np.isfinite(sim.Hx).all()
-        assert np.isfinite(sim.Hy).all()
-        assert np.isfinite(sim.Hz).all()
+        self.assertTrue(np.isfinite(sim.Ex).all())
+        self.assertTrue(np.isfinite(sim.Ey).all())
+        self.assertTrue(np.isfinite(sim.Ez).all())
+        self.assertTrue(np.isfinite(sim.Hx).all())
+        self.assertTrue(np.isfinite(sim.Hy).all())
+        self.assertTrue(np.isfinite(sim.Hz).all())
 
     def test_plane_wave_propagation(self):
         """Test basic field updates."""
@@ -98,8 +97,8 @@ class TestYee3D(unittest.TestCase):
             sim.step()
 
         # Fields should have changed
-        assert np.sum(np.abs(sim.Ez)) > 0
-        assert np.sum(np.abs(sim.Hx)) > 0
+        self.assertGreater(np.sum(np.abs(sim.Ez)), 0)
+        self.assertGreater(np.sum(np.abs(sim.Hx)), 0)
 
     def test_coil_addition(self):
         """Test adding a coil source."""
@@ -110,10 +109,10 @@ class TestYee3D(unittest.TestCase):
 
         center = (nx // 2, ny // 2, nz // 2)
         radius = 3
-        sim.add_coil(center, radius, axis='z', turns=1, current=1.0)
+        sim.add_coil(center, radius, axis="z", turns=1, current=1.0)
 
         # Check that Jz has non-zero values in the coil region
-        assert np.sum(np.abs(sim.Jz)) > 0
+        self.assertGreater(np.sum(np.abs(sim.Jz)), 0)
 
     def test_pml_initialization(self):
         """Test PML setup."""
@@ -124,10 +123,10 @@ class TestYee3D(unittest.TestCase):
         sim = Yee3D(nx, ny, nz, dx, dt, pml_width=pml_width)
 
         # Check that damping arrays exist and are shaped correctly
-        assert hasattr(sim, 'dampE_Ex')
-        assert sim.dampE_Ex.shape == sim.Ex.shape
-        assert np.all(sim.dampE_Ex <= 1.0)  # Damping factors <= 1
+        self.assertTrue(hasattr(sim, "dampE_Ex"))
+        self.assertEqual(sim.dampE_Ex.shape, sim.Ex.shape)
+        self.assertTrue(np.all(sim.dampE_Ex <= 1.0))  # Damping factors <= 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
