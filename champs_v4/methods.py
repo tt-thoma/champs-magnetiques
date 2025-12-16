@@ -583,4 +583,12 @@ def step(
     return (
         Hx, Hy, Hz,
         Ex, Ey, Ez,
+
+        psi_ex_dy, psi_ex_dz,
+        psi_ey_dx, psi_ey_dz,
+        psi_ez_dx, psi_ez_dy,
+
+        psi_hx_dy, psi_hx_dz,
+        psi_hy_dx, psi_hy_dz,
+        psi_hz_dx, psi_hz_dy
     )
