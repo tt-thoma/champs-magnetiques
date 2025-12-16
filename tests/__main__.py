@@ -1,11 +1,10 @@
-import inspect
 import sys
 import traceback
 import unittest
+import warnings
 from optparse import OptionParser, Values
 from typing import TYPE_CHECKING
 from unittest import (
-    TestCase,
     TestSuite,
     TextTestResult,
     TextTestRunner,
@@ -28,25 +27,40 @@ if TYPE_CHECKING:
 class GitHubTestResult(TextTestResult):
     def startTest(self, test: unittest.case.TestCase) -> None:
         self.stream.write(f"::group::{self.getDescription(test)}\n")
+        self.stream.flush()
         super().startTest(test)
         self.stream.flush()
 
     def addError(self, test: unittest.case.TestCase, err: "OptExcInfo") -> None:
-        if err[0] is not None:
-            pretty_err = traceback.format_exception(err[1])[-1].strip("\n")
-            file = err[1]
+        sys.stdout.flush()
+        self.stream.flush()
+        if err[1] is not None and err[1].__traceback__ is not None:
+            pretty_err: str = traceback.format_exception(err[1])[-1].strip("\n")
+            frame: traceback.FrameSummary = traceback.extract_tb(err[1].__traceback__)[
+                -1
+            ]
+            self.stream.write(
+                f"\n::error file={frame.filename},line={frame.lineno},endLine={frame.end_lineno},col={frame.colno},"
+                f"endCol={frame.end_colno},title={str(test)}::{pretty_err}\n"
+            )
         else:
-            pretty_err = "ERROR"
+            self.stream.write(f"\n::error title={str(test)}::ERROR\n")
         super().addError(test, err)
-        self.stream.write(
-            f"::error file={inspect.getfile(test.__class__)},col={inspect.getsourcelines(test.__class__)[1]},"
-            f"title={str(test)}::{pretty_err}\n"
-        )
         self.stream.write("::endgroup::\n")
         self.stream.flush()
 
     def addSuccess(self, test: unittest.case.TestCase) -> None:
+        sys.stdout.flush()
+        self.stream.flush()
         super().addSuccess(test)
+        self.stream.write("::endgroup::\n")
+        self.stream.flush()
+
+    def addSkip(self, test: unittest.case.TestCase, reason: str) -> None:
+        sys.stdout.flush()
+        self.stream.flush()
+        self.stream.write(f"\n::notice title={str(test)}::{reason}\n")
+        super().addSkip(test, reason)
         self.stream.write("::endgroup::\n")
         self.stream.flush()
 
@@ -68,7 +82,15 @@ def test_suite(options: Values) -> TestSuite:
     return suite
 
 
+def custom(message, category, filename, lineno, line=None) -> str:
+    """Function to format a warning the standard way."""
+    return f"\n::warning file={filename},line={lineno},title={category.__name__}::{message}\n"
+
+
 if __name__ == "__main__":
+    warnings.simplefilter("always")
+    warnings.formatwarning = custom  # ty: ignore
+
     parser: OptionParser = OptionParser()
     parser.add_option("-f", "--full", action="store_true", dest="full", default=False)
     parser.add_option(
@@ -84,7 +106,7 @@ if __name__ == "__main__":
     opts, args = parser.parse_args()
 
     runner: TextTestRunner = TextTestRunner(
-        verbosity=2, durations=0, resultclass=opts.resultclass
+        verbosity=2, durations=0, resultclass=opts.resultclass, warnings="always"
     )
     results: TextTestResult = runner.run(test_suite(opts))
 
