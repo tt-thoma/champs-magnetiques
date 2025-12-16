@@ -61,7 +61,7 @@ class GitHubTestResult(TextTestResult):
         self.stream.write("::endgroup::\n")
         self.stream.flush()
 
-    def addFailure(self, test: unittest.case.TestCase, err: OptExcInfo) -> None:
+    def addFailure(self, test: unittest.case.TestCase, err: "OptExcInfo") -> None:
         self.__error(test, err)
         super().addFailure(test, err)
         self.stream.write("::endgroup::\n")
