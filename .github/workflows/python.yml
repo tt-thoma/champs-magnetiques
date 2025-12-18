@@ -59,6 +59,7 @@ jobs:
       env:
         NUMBA_CACHE_DIR: ./.numba_cache
         NUMBA_DEBUG_CACHE: 1
+        NUMBA_CPU_NAME: generic
       run: |
         python -m tests -f -g
 
