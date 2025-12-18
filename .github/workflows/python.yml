@@ -45,13 +45,6 @@ jobs:
         restore-keys: |
           numba-${{ env.GITHUB_RUN_NUMBER_WITH_OFFSET }}
 
-    - name: Huh
-      continue-on-error: true
-      run: |
-        ls -la ./.numba_cache
-        ls -la ./.numba_cache/*/
-        python -m pickle ./.numba_cache/champs_v4_6eba136648b986623d42d8b93aeacb9d7f99f9e1/methods.compute_material_coefficients-9.py314.nbi
-
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -66,13 +59,6 @@ jobs:
       run: |
         python -m tests -f -g
 
-    - name: Huhh
-      continue-on-error: true
-      run: |
-        ls -la ./.numba_cache
-        ls -la ./.numba_cache/*/
-        python -m pickle ./.numba_cache/champs_v4_6eba136648b986623d42d8b93aeacb9d7f99f9e1/methods.compute_material_coefficients-9.py314.nbi
-    
     # https://github.com/actions/cache/issues/342#issuecomment-2773231159
     - name: Save cache
       uses: actions/cache/save@v4
@@ -90,4 +76,3 @@ jobs:
       # Using `--repo` makes it so that this step doesn't require checking out the
       # repo first.
       run: gh cache delete --repo ${{ github.repository }} numba-${{ env.GITHUB_RUN_NUMBER_WITH_OFFSET }}
-    
