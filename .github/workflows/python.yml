@@ -80,5 +80,5 @@ jobs:
       if: steps.restoreCache.outputs.cache-hit
       # Using `--repo` makes it so that this step doesn't require checking out the
       # repo first.
-      run: gh cache delete --repo ${{ github.repository }} ${{ steps.restoreCache.outputs.cache-primary-key }}
+      run: gh cache delete --repo ${{ github.repository }} ${{ steps.restoreCache.outputs.cache-matched-key }}
     
