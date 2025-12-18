@@ -35,6 +35,7 @@ jobs:
       with:
         python-version: "3.14"
     - name: Huh
+      continue-on-error: true
       run: |
         ls -la ./.numba_cache
         ls -la ./.numba_cache/*/
@@ -52,6 +53,7 @@ jobs:
       run: |
         python -m tests -f -g
     - name: Huhh
+      continue-on-error: true
       run: |
         ls -la ./.numba_cache
         ls -la ./.numba_cache/*/
