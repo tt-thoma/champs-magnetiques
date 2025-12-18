@@ -11,6 +11,7 @@ from unittest import (
     defaultTestLoader,
 )
 
+from .test_cache import TestCache
 from .test_CFL_check import TestCFLCheck
 from .test_dispersion import TestDispersion
 from .test_examples import TestExamples
@@ -67,6 +68,9 @@ class GitHubTestResult(TextTestResult):
         self.stream.write("::endgroup::\n")
         self.stream.flush()
 
+    def addDuration(self, test: unittest.case.TestCase, elapsed: float) -> None:
+        return super().addDuration(test, elapsed)
+
 
 def test_suite(options: Values) -> TestSuite:
     suite: TestSuite = TestSuite()
@@ -75,6 +79,7 @@ def test_suite(options: Values) -> TestSuite:
     suite.addTests(defaultTestLoader.loadTestsFromTestCase(TestYee3D))
     suite.addTests(defaultTestLoader.loadTestsFromTestCase(TestYeePlaneWave3D))
     suite.addTests(defaultTestLoader.loadTestsFromTestCase(TestYeeSkinDepth))
+    suite.addTests(defaultTestLoader.loadTestsFromTestCase(TestCache))
 
     if options.full:
         suite.addTests(defaultTestLoader.loadTestsFromTestCase(TestCFLCheck))
@@ -109,7 +114,7 @@ if __name__ == "__main__":
     opts, args = parser.parse_args()
 
     runner: TextTestRunner = TextTestRunner(
-        verbosity=2,
+        verbosity=4,
         durations=0,
         resultclass=opts.resultclass,
         warnings="always",
