@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 jobs:
   test:
@@ -20,26 +21,28 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Cache Numba
-      id: loadCache
-      uses: actions/cache/restore@v4
-      with:
-        path: |
-          ./.numba_cache
-        key: numba-${{ hashFiles('./.numba_cache/**/*') }}
-        restore-keys: |
-          numba-${{ hashFiles('./.numba_cache/**/*') }}
-          numba-
     - name: Set up Python 3.14
       uses: actions/setup-python@v3
       with:
         python-version: "3.14"
+
+    - name: Restore cache
+      id: restoreCache
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          ./.numba_cache
+        restore-keys: |
+          numba-${{ github.run_number }}
+          numba-
+
     - name: Huh
       continue-on-error: true
       run: |
         ls -la ./.numba_cache
         ls -la ./.numba_cache/*/
         python -m pickle ./.numba_cache/champs_v4_6eba136648b986623d42d8b93aeacb9d7f99f9e1/methods.compute_material_coefficients-9.py314.nbi
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -52,6 +55,7 @@ jobs:
         NUMBA_DEBUG_CACHE: 1
       run: |
         python -m tests -f -g
+
     - name: Huhh
       continue-on-error: true
       run: |
@@ -63,16 +67,16 @@ jobs:
     - name: Delete old cache
       env:
         GH_TOKEN: ${{ github.token }}
-      if: steps.loadCache.outputs.cache-hit
+      if: steps.restoreCache.outputs.cache-hit
       # Using `--repo` makes it so that this step doesn't require checking out the
       # repo first.
-      run: gh cache delete --repo ${{ github.repository }} ${{ steps.loadCache.outputs.cache-primary-key }}
+      run: gh cache delete --repo ${{ github.repository }} ${{ steps.restoreCache.outputs.cache-primary-key }}
     - name: Save cache
       uses: actions/cache/save@v4
       id: saveCache
       # Save the cache even if build steps fail.
       if: always()
       with:
-        key: ${{ steps.loadCache.outputs.cache-primary-key }}
+        key: numba-${{ github.run_number }}
         path: |
           ./.numba_cache
