@@ -90,14 +90,16 @@ def test_suite(options: Values) -> TestSuite:
     return suite
 
 
-def custom(message, category, filename, lineno, line=None) -> str:
+def custom(message, category, filename, lineno, file=None, line=None) -> None:
     """Function to format a warning the standard way."""
-    return f"\n::warning file={filename},line={lineno},title={category.__name__}::{message}\n"
+    sys.stdout.write(
+        f"\n::warning file={filename},line={lineno},title={category.__name__}::{message}\n"
+    )
 
 
 if __name__ == "__main__":
     warnings.simplefilter("always")
-    warnings.formatwarning = custom  # ty: ignore
+    warnings.showwarning = custom  # ty: ignore
 
     parser: OptionParser = OptionParser()
     parser.add_option("-f", "--full", action="store_true", dest="full", default=False)
