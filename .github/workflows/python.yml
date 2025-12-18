@@ -32,6 +32,7 @@ jobs:
       with:
         path: |
           ./.numba_cache
+        key: numba-${{ github.run_number }}
         restore-keys: |
           numba-${{ github.run_number }}
           numba-
