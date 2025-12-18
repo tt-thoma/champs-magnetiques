@@ -26,11 +26,12 @@ jobs:
       with:
         python-version: "3.14"
 
+    # https://stackoverflow.com/questions/75107411/sum-expression-in-github-action-run-name
     - name: Compute previous cache ID
       env:
         NUM: ${{ github.run_number }}
       run: |
-        echo "GITHUB_RUN_NUMBER_WITH_OFFSET=$(($NUM + 200))" >> $GITHUB_ENV
+        echo "GITHUB_RUN_NUMBER_WITH_OFFSET=$(($NUM - 1))" >> $GITHUB_ENV
     - name: Restore cache
       id: restoreCache
       uses: actions/cache/restore@v4
