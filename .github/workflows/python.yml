@@ -26,15 +26,20 @@ jobs:
       with:
         python-version: "3.14"
 
+    - name: Compute previous cache ID
+      env:
+        NUM: ${{ github.run_number }}
+      run: |
+        echo "GITHUB_RUN_NUMBER_WITH_OFFSET=$(($NUM + 200))" >> $GITHUB_ENV
     - name: Restore cache
       id: restoreCache
       uses: actions/cache/restore@v4
       with:
         path: |
           ./.numba_cache
-        key: numba-${{ github.run_number }}
+        key: numba-${{ env.GITHUB_RUN_NUMBER_WITH_OFFSET }}
         restore-keys: |
-          numba-${{ github.run_number - 1 }}
+          numba-${{ env.GITHUB_RUN_NUMBER_WITH_OFFSET }}
 
     - name: Huh
       continue-on-error: true
@@ -79,5 +84,5 @@ jobs:
       if: steps.restoreCache.outputs.cache-hit
       # Using `--repo` makes it so that this step doesn't require checking out the
       # repo first.
-      run: gh cache delete --repo ${{ github.repository }} numba-${{ github.run_number - 1 }}
+      run: gh cache delete --repo ${{ github.repository }} numba-${{ env.GITHUB_RUN_NUMBER_WITH_OFFSET }}
     
