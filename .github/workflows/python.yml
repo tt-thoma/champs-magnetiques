@@ -34,8 +34,7 @@ jobs:
           ./.numba_cache
         key: numba-${{ github.run_number }}
         restore-keys: |
-          numba-${{ github.run_number }}
-          numba-
+          numba-${{ github.run_number - 1 }}
 
     - name: Huh
       continue-on-error: true
@@ -80,5 +79,5 @@ jobs:
       if: steps.restoreCache.outputs.cache-hit
       # Using `--repo` makes it so that this step doesn't require checking out the
       # repo first.
-      run: gh cache delete --repo ${{ github.repository }} ${{ steps.restoreCache.outputs.cache-matched-key }}
+      run: gh cache delete --repo ${{ github.repository }} numba-${{ github.run_number - 1 }}
     
