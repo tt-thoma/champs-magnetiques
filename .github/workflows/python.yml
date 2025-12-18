@@ -21,8 +21,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Cache Numba
-      id: cache-numba
-      uses: actions/cache@v4
+      id: loadCache
+      uses: actions/cache/restore@v4
       with:
         path: |
           ./.numba_cache
@@ -59,3 +59,20 @@ jobs:
         ls -la ./.numba_cache/*/
         python -m pickle ./.numba_cache/champs_v4_6eba136648b986623d42d8b93aeacb9d7f99f9e1/methods.compute_material_coefficients-9.py314.nbi
     
+    # https://github.com/actions/cache/issues/342#issuecomment-2773231159
+    - name: Delete old cache
+      env:
+        GH_TOKEN: ${{ github.token }}
+      if: steps.loadCache.outputs.cache-hit
+      # Using `--repo` makes it so that this step doesn't require checking out the
+      # repo first.
+      run: gh cache delete --repo ${{ github.repository }} ${{ steps.loadCache.outputs.cache-primary-key }}
+    - name: Save cache
+      uses: actions/cache/save@v4
+      id: saveCache
+      # Save the cache even if build steps fail.
+      if: always()
+      with:
+        key: ${{ steps.loadCache.outputs.cache-primary-key }}
+        path: |
+          ./.numba_cache
