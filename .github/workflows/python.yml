@@ -64,13 +64,6 @@ jobs:
         python -m pickle ./.numba_cache/champs_v4_6eba136648b986623d42d8b93aeacb9d7f99f9e1/methods.compute_material_coefficients-9.py314.nbi
     
     # https://github.com/actions/cache/issues/342#issuecomment-2773231159
-    - name: Delete old cache
-      env:
-        GH_TOKEN: ${{ github.token }}
-      if: steps.restoreCache.outputs.cache-hit
-      # Using `--repo` makes it so that this step doesn't require checking out the
-      # repo first.
-      run: gh cache delete --repo ${{ github.repository }} ${{ steps.restoreCache.outputs.cache-primary-key }}
     - name: Save cache
       uses: actions/cache/save@v4
       id: saveCache
@@ -80,3 +73,11 @@ jobs:
         key: numba-${{ github.run_number }}
         path: |
           ./.numba_cache
+    - name: Delete old cache
+      env:
+        GH_TOKEN: ${{ github.token }}
+      if: steps.restoreCache.outputs.cache-hit
+      # Using `--repo` makes it so that this step doesn't require checking out the
+      # repo first.
+      run: gh cache delete --repo ${{ github.repository }} ${{ steps.restoreCache.outputs.cache-primary-key }}
+    
