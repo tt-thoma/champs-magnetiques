@@ -25,12 +25,11 @@ jobs:
       uses: actions/cache@v4
       with:
         path: |
-          ./champs_v4/__pycache__
-          ./champs_v4/visualization/__pycache__
-          ./examples/__pycache__
-          ./tests/__pycache__
           ./.numba_cache
-        key: numba
+        key: numba-${{ hashFiles('./.numba_cache/**/*') }}
+        restore-keys: |
+          numba-${{ hashFiles('./.numba_cache/**/*') }}
+          numba-
     - name: Set up Python 3.14
       uses: actions/setup-python@v3
       with:
