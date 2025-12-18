@@ -17,9 +17,11 @@ class TestCache(unittest.TestCase):
         else:
             warnings.warn("Cache unavailable")
 
+        new_cache: uuid.UUID = uuid.uuid4()
         wfile: BufferedWriter
         with open(TAG_FILE, "wb") as wfile:
-            wfile.write(uuid.uuid4().bytes)
+            wfile.write(new_cache.bytes)
+        print(new_cache)
 
 
 if __name__ == "__main__":
