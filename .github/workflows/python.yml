@@ -41,9 +41,10 @@ jobs:
       with:
         path: |
           ./.numba_cache
-        key: numba-${{ env.GITHUB_RUN_NUMBER_WITH_OFFSET }}
+          ./tests/results/timings.dat
+        key: run-${{ env.GITHUB_RUN_NUMBER_WITH_OFFSET }}
         restore-keys: |
-          numba-${{ env.GITHUB_RUN_NUMBER_WITH_OFFSET }}
+          run-${{ env.GITHUB_RUN_NUMBER_WITH_OFFSET }}
 
     - name: Install dependencies
       run: |
@@ -66,13 +67,14 @@ jobs:
       # Save the cache even if build steps fail.
       if: always()
       with:
-        key: numba-${{ github.run_number }}
+        key: run-${{ github.run_number }}
         path: |
           ./.numba_cache
+          ./tests/results/timings.dat
     - name: Delete old cache
       env:
         GH_TOKEN: ${{ github.token }}
       if: steps.restoreCache.outputs.cache-hit
       # Using `--repo` makes it so that this step doesn't require checking out the
       # repo first.
-      run: gh cache delete --repo ${{ github.repository }} numba-${{ env.GITHUB_RUN_NUMBER_WITH_OFFSET }}
+      run: gh cache delete --repo ${{ github.repository }} run-${{ env.GITHUB_RUN_NUMBER_WITH_OFFSET }}
