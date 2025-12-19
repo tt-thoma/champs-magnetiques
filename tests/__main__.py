@@ -155,7 +155,14 @@ if __name__ == "__main__":
             "# Timings\n\n| Test | Previous | Latest | Improvement | Diff |\n"
             "| :--- | :---: | :---: | ---: | ---: |\n"
         )
-        for test_name, test_time in results.timings.items():
+        test_name: str
+        test_time: list[float]
+        for test_name, test_time in {
+            k: v
+            for k, v in sorted(
+                results.timings.items(), key=lambda item: item[1], reverse=True
+            )
+        }.items():
             previous_time: float = test_time[-2] if len(test_time) > 1 else float("inf")
             improvement: float = (
                 test_time[-1] / test_time[-2] if len(test_time) > 1 else 1
