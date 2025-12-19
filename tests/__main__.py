@@ -1,8 +1,11 @@
+import os
+import pickle
 import sys
 import traceback
 import unittest
 import warnings
 from optparse import OptionParser, Values
+from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest import (
     TestSuite,
@@ -22,10 +25,31 @@ from .test_yee_plane_wave_3d import TestYeePlaneWave3D
 from .test_yee_skin_depth import TestYeeSkinDepth
 
 if TYPE_CHECKING:
+    from unittest.runner import _WritelnDecorator
+
     from _typeshed import OptExcInfo
+
+TIMINGS: Path = Path("./tests/results/timings.dat")
+timings: dict[str, list[float]]
+if TIMINGS.exists():
+    with open(TIMINGS, "rb") as timings_file:
+        timings = pickle.load(timings_file)
+else:
+    timings = {}
 
 
 class GitHubTestResult(TextTestResult):
+    def __init__(
+        self,
+        stream: "_WritelnDecorator",
+        descriptions: bool,
+        verbosity: int,
+        *,
+        durations: int | None = None,
+    ) -> None:
+        super().__init__(stream, descriptions, verbosity, durations=durations)
+        self.timings: dict[str, list[float]] = {}
+
     def startTest(self, test: unittest.case.TestCase) -> None:
         self.stream.write(f"::group::{self.getDescription(test)}\n")
         self.stream.flush()
@@ -69,6 +93,7 @@ class GitHubTestResult(TextTestResult):
         self.stream.flush()
 
     def addDuration(self, test: unittest.case.TestCase, elapsed: float) -> None:
+        self.timings[str(test)] = timings.get(str(test), []) + [elapsed]
         return super().addDuration(test, elapsed)
 
 
@@ -122,7 +147,31 @@ if __name__ == "__main__":
         warnings="always",
         stream=sys.stdout,
     )
-    results: TextTestResult = runner.run(test_suite(opts))
+    results: TextTestResult | GitHubTestResult = runner.run(test_suite(opts))
+
+    # Summary file
+    if isinstance(results, GitHubTestResult):
+        summary: str = (
+            "# Timings\n\n| Test | Previous | Latest | Improvement | Diff |\n"
+            "| :--- | :---: | :---: | ---: | ---: |\n"
+        )
+        for test_name, test_time in results.timings.items():
+            previous_time: float = test_time[-2] if len(test_time) > 1 else float("inf")
+            improvement: float = (
+                test_time[-1] / test_time[-2] if len(test_time) > 1 else 1
+            )
+            diff: float = (test_time[-1] - previous_time) / previous_time
+            summary += (
+                f"| {test_name} | {previous_time:.3f} s | {test_time[-1]:.3f} s | x{improvement:.3f} "
+                f"| {diff:+.2%} |\n"
+            )
+
+        with open(
+            os.environ.get("GITHUB_STEP_SUMMARY", "./tests/results/summary.md"), "w"
+        ) as summary_file:
+            summary_file.write(summary)
+        with open(TIMINGS, "wb") as timings_file:
+            pickle.dump(results.timings, timings_file)
 
     if not results.wasSuccessful():
         sys.exit(-1)

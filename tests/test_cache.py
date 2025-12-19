@@ -13,7 +13,7 @@ class TestCache(unittest.TestCase):
         if TAG_FILE.exists():
             file: BufferedReader
             with open(TAG_FILE, "rb") as file:
-                print(uuid.UUID(bytes=file.read()))
+                print("Old cache", uuid.UUID(bytes=file.read()))
         else:
             warnings.warn("Cache unavailable")
 
@@ -21,7 +21,7 @@ class TestCache(unittest.TestCase):
         wfile: BufferedWriter
         with open(TAG_FILE, "wb") as wfile:
             wfile.write(new_cache.bytes)
-        print(new_cache)
+        print("New cache", new_cache)
 
 
 if __name__ == "__main__":
