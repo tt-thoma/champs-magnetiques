@@ -53,7 +53,7 @@ jobs:
           ~/.venv
           /var/cache/apt/archives
         key: dependencies
-        restore-key: dependencies
+        restore-keys: dependencies
     - name: Install dependencies
       run: |
         python -m venv .venv
