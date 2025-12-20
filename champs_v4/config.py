@@ -5,7 +5,6 @@
 import functools
 import importlib.util
 import logging
-from curses import wrapper
 
 import numpy as np
 
