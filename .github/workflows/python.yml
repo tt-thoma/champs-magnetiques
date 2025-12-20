@@ -46,8 +46,18 @@ jobs:
         restore-keys: |
           run-${{ env.GITHUB_RUN_NUMBER_WITH_OFFSET }}
 
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.venv
+          /var/cache/apt/archives
+        key: dependencies
+        restore-key: dependencies
     - name: Install dependencies
       run: |
+        python -m venv .venv
+        source .venv/bin/activate
         python -m pip install --upgrade pip
         python -m pip install -r requirements.txt
         python -m pip install -r requirements_opt.txt
@@ -58,6 +68,7 @@ jobs:
         NUMBA_DEBUG_CACHE: 1
         NUMBA_CPU_NAME: generic
       run: |
+        source .venv/bin/activate
         python -m tests -f -g
 
     # https://github.com/actions/cache/issues/342#issuecomment-2773231159
