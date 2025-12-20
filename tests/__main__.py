@@ -177,8 +177,8 @@ if __name__ == "__main__":
             os.environ.get("GITHUB_STEP_SUMMARY", "./tests/results/summary.md"), "w"
         ) as summary_file:
             summary_file.write(summary)
-        with open(TIMINGS, "wb") as timings_file:
-            pickle.dump(results.timings, timings_file)
+        with open(TIMINGS, "wb") as timings_file_w:
+            pickle.dump(results.timings, timings_file_w)
 
     if not results.wasSuccessful():
         sys.exit(-1)

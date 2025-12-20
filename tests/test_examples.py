@@ -1,32 +1,42 @@
-from unittest import TestCase, main, skip
+from importlib import import_module
+from pkgutil import iter_modules
+from types import ModuleType
+from typing import Any, Callable
+from unittest import TestCase, main
 
-from examples.run_antenna_precise_long import main as run_antenna_precise_long
-from examples.run_antenna_test import main as run_antenna_test
-from examples.run_coil import main as run_coil
-from examples.run_coil_anim import main as run_coil_anim
-from examples.run_coil_slice_anim import main as run_coil_slice_anim
-from examples.run_simulation import main as run_simulation
+from examples import base_dir
 
 
-class TestExamples(TestCase):
-    @skip("Takes too long")
-    def test_run_antenna_precise_long(self) -> None:
-        run_antenna_precise_long()
+class TestExamplesMeta(type):
+    def __new__[T](
+        mcs: type[T], name: str, bases: tuple[type, ...], dict: dict[str, Any]
+    ) -> T:
+        def new_test(function: Callable[[], None]) -> Callable[[T], None]:
+            def test(self: T) -> None:
+                function()
 
-    def test_run_antenna_test(self) -> None:
-        run_antenna_test()
+            return test
 
-    def test_run_coil(self) -> None:
-        run_coil()
+        for mod in iter_modules([base_dir]):
+            if mod.name.startswith("anim"):
+                module_path: str = f"examples.{mod.name}"
+                module: ModuleType = import_module(module_path)
+                dict[f"test_{mod.name.lstrip('anim_')}"] = new_test(module.main)
 
-    def test_run_coil_anim(self) -> None:
-        run_coil_anim()
+        return type.__new__(mcs, name, bases, dict)
 
-    def test_run_coil_slice_anim(self) -> None:
-        run_coil_slice_anim()
 
-    def test_run_simulation(self) -> None:
-        run_simulation()
+class TestExamples(TestCase, metaclass=TestExamplesMeta):
+    pass
+
+    # def test_examples(self) -> None:
+    #     # onerror=lambda err: warnings.warn(err, ImportWarning) (for walk_packages)
+    #     for mod in iter_modules([base_dir]):
+    #         if mod.name.startswith("anim"):
+    #             module_path: str = f"examples.{mod.name}"
+    #             with self.subTest(msg=module_path):
+    #                 module: ModuleType = import_module(module_path)
+    #                 module.main()
 
 
 if __name__ == "__main__":
