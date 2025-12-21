@@ -18,10 +18,10 @@ class TestExamplesMeta(type):
             return test
 
         for mod in iter_modules([base_dir]):
-            if mod.name.startswith("anim"):
+            if mod.name.startswith("demo"):  # mod.name.startswith("anim")
                 module_path: str = f"examples.{mod.name}"
                 module: ModuleType = import_module(module_path)
-                dict[f"test_{mod.name.lstrip('anim_')}"] = new_test(module.main)
+                dict[f"test_{mod.name.lstrip('demo_')}"] = new_test(module.main)
 
         return type.__new__(mcs, name, bases, dict)
 
