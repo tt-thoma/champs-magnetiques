@@ -51,7 +51,7 @@ jobs:
       with:
         path: |
           ~/.venv
-          /var/cache/apt/archives
+          /var/cache/apt/archives/*.deb
         key: dependencies
         restore-keys: dependencies
     - name: Install dependencies
