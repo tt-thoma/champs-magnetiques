@@ -153,14 +153,15 @@ if __name__ == "__main__":
             folder: str = subdir.name
             summary += f"## {folder}\n\n"
             for subfile in subdir.iterdir():
-                image: str = subfile.name
-                summary += f"### {image}\n\n"
-                summary += "| Before | After |\n| --- | --- |\n"
-                summary += (
-                    f"| ![Before]({URL.format(prev_commit, folder, image)})"
-                    f"| ![After]({URL.format(next_commit, folder, image)})"
-                    "|\n\n"
-                )
+                if subfile.is_file():
+                    image: str = subfile.name
+                    summary += f"### {image}\n\n"
+                    summary += "| Before | After |\n| --- | --- |\n"
+                    summary += (
+                        f"| ![Before]({URL.format(prev_commit, folder, image)})"
+                        f"| ![After]({URL.format(next_commit, folder, image)})"
+                        "|\n\n"
+                    )
 
         subprocess.run(["git", "checkout", "master"], check=True)
 
