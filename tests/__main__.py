@@ -25,6 +25,9 @@ from .test_yee3d import TestYee3D
 from .test_yee_plane_wave_3d import TestYeePlaneWave3D
 from .test_yee_skin_depth import TestYeeSkinDepth
 
+RESULTS: Path = Path("./tests/results")
+RESULTS.mkdir(parents=True, exist_ok=True)
+
 
 def test_suite(options: Values) -> TestSuite:
     suite: TestSuite = TestSuite()
@@ -98,18 +101,19 @@ if __name__ == "__main__":
         git push -u origin results
         git checkout master
         """
-        subprocess.run(
-            ["git", "config", "user.name", "github-actions[bot]"], check=True
-        )
-        subprocess.run(
-            [
-                "git",
-                "config",
-                "user.email",
-                "41898282+github-actions[bot]@users.noreply.github.com",
-            ],
-            check=True,
-        )
+        if not opts.local:
+            subprocess.run(
+                ["git", "config", "user.name", "github-actions[bot]"], check=True
+            )
+            subprocess.run(
+                [
+                    "git",
+                    "config",
+                    "user.email",
+                    "41898282+github-actions[bot]@users.noreply.github.com",
+                ],
+                check=True,
+            )
         subprocess.run(["git", "checkout", "results"], check=True)
         prev_commit: str = (
             subprocess.run(
@@ -129,7 +133,8 @@ if __name__ == "__main__":
             ],
             check=True,
         )
-        subprocess.run(["git", "push", "-u", "origin", "results"], check=True)
+        if not opts.local:
+            subprocess.run(["git", "push", "-u", "origin", "results"], check=True)
         next_commit: str = (
             subprocess.run(
                 ["git", "rev-parse", "HEAD"], capture_output=True, check=True
@@ -160,7 +165,7 @@ if __name__ == "__main__":
         subprocess.run(["git", "checkout", "master"], check=True)
 
         with open(
-            os.environ.get("GITHUB_STEP_SUMMARY", "./tests/results/summary.md"), "w"
+            os.environ.get("GITHUB_STEP_SUMMARY", RESULTS / "summary.md"), "w"
         ) as summary_file:
             summary_file.write(summary)
         with open(TIMINGS, "wb") as timings_file_w:

@@ -15,6 +15,9 @@ parser.add_option(
 parser.add_option(
     "-e", "--examples", action="store_true", dest="examples", default=False
 )
+parser.add_option(
+    "-l", "--local", action="store_true", dest="local", default=False
+)
 opts: Values
 args: list[str]
 opts, args = parser.parse_args()
