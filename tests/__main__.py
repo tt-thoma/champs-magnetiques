@@ -185,13 +185,6 @@ if __name__ == "__main__":
         git push -u origin results
         git checkout master
         """
-        prev_commit: str = (
-            subprocess.run(
-                ["git", "rev-parse", "HEAD"], capture_output=True, check=True
-            )
-            .stdout.strip()
-            .decode()
-        )
         subprocess.run(
             ["git", "config", "user.name", "github-actions[bot]"], check=True
         )
@@ -205,6 +198,13 @@ if __name__ == "__main__":
             check=True,
         )
         subprocess.run(["git", "checkout", "results"], check=True)
+        prev_commit: str = (
+            subprocess.run(
+                ["git", "rev-parse", "HEAD"], capture_output=True, check=True
+            )
+            .stdout.strip()
+            .decode()
+        )
         subprocess.run(["git", "add", "examples/results/"], check=True)
         subprocess.run(
             [
@@ -217,7 +217,6 @@ if __name__ == "__main__":
             check=True,
         )
         subprocess.run(["git", "push", "-u", "origin", "results"], check=True)
-        subprocess.run(["git", "checkout", "master"], check=True)
         next_commit: str = (
             subprocess.run(
                 ["git", "rev-parse", "HEAD"], capture_output=True, check=True
@@ -225,6 +224,7 @@ if __name__ == "__main__":
             .stdout.strip()
             .decode()
         )
+        subprocess.run(["git", "checkout", "master"], check=True)
 
         print(f"{prev_commit=} {next_commit=}")
 
