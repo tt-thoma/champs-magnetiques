@@ -1,5 +1,7 @@
+import datetime
 import os
 import pickle
+import subprocess
 import sys
 import traceback
 import unittest
@@ -172,6 +174,59 @@ if __name__ == "__main__":
                 f"| {test_name} | {previous_time:.3f} s | {test_time[-1]:.3f} s | x{improvement:.3f} "
                 f"| {diff:+.2%} |\n"
             )
+
+        # Add images
+        """
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git checkout results
+        git add examples/results/
+        git commit --allow-empty -m "${{ github.run_number }}.${{ github.run_attempt }}"
+        git push -u origin results
+        git checkout master
+        """
+        prev_commit: str = (
+            subprocess.run(
+                ["git", "rev-parse", "HEAD"], capture_output=True, check=True
+            )
+            .stdout.strip()
+            .decode()
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "github-actions[bot]"], check=True
+        )
+        subprocess.run(
+            [
+                "git",
+                "config",
+                "user.email",
+                "41898282+github-actions[bot]@users.noreply.github.com",
+            ],
+            check=True,
+        )
+        subprocess.run(["git", "checkout", "results"], check=True)
+        subprocess.run(["git", "add", "examples/results/"], check=True)
+        subprocess.run(
+            [
+                "git",
+                "commit",
+                "--allow-empty",
+                "-m",
+                datetime.datetime.now().isoformat(),
+            ],
+            check=True,
+        )
+        subprocess.run(["git", "push", "-u", "origin", "results"], check=True)
+        subprocess.run(["git", "checkout", "master"], check=True)
+        next_commit: str = (
+            subprocess.run(
+                ["git", "rev-parse", "HEAD"], capture_output=True, check=True
+            )
+            .stdout.strip()
+            .decode()
+        )
+
+        print(f"{prev_commit=} {next_commit=}")
 
         with open(
             os.environ.get("GITHUB_STEP_SUMMARY", "./tests/results/summary.md"), "w"
