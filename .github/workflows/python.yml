@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   actions: write
 
 concurrency:
@@ -50,7 +50,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: |
-          ~/.venv
+          ./.venv
         key: dependencies
         restore-keys: dependencies
     - name: Install dependencies
@@ -69,6 +69,15 @@ jobs:
       run: |
         source .venv/bin/activate
         python -m tests -f -g
+    - name: Upload results
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git checkout results
+        git add examples/results/
+        git commit -m "$GITHUB_RUN_ATTEMPT"
+        git push -u origin results
+        git checkout master
 
     # https://github.com/actions/cache/issues/342#issuecomment-2773231159
     - name: Save cache
