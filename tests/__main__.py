@@ -1,4 +1,5 @@
 import datetime
+from math import nan
 import os
 import pickle
 import subprocess
@@ -14,7 +15,7 @@ from unittest import (
 )
 
 from ._options import opts
-from ._result import TIMINGS, GitHubTestResult
+from ._result import TIMINGS, GitHubTestResult, timings
 from .test_cache import TestCache
 from .test_CFL_check import TestCFLCheck
 from .test_dispersion import TestDispersion
@@ -74,22 +75,26 @@ if __name__ == "__main__":
             "| :--- | :---: | :---: | ---: | ---: |\n"
         )
         test_name: str
-        test_time: list[float]
+        test_time: float
         for test_name, test_time in {
             k: v
             for k, v in sorted(
                 results.timings.items(), key=lambda item: item[1], reverse=True
             )
         }.items():
-            previous_time: float = test_time[-2] if len(test_time) > 1 else float("inf")
+            previous_time: float = timings[test_name][-1] if test_name in timings else float("inf")
             improvement: float = (
-                test_time[-1] / test_time[-2] if len(test_time) > 1 else 1
+                test_time / previous_time if test_name in timings else nan
             )
-            diff: float = (test_time[-1] - previous_time) / previous_time
+            diff: float = (test_time - previous_time) / previous_time
             summary += (
-                f"| {test_name} | {previous_time:.3f} s | {test_time[-1]:.3f} s | x{improvement:.3f} "
+                f"| {test_name} | {previous_time:.3f} s | {previous_time:.3f} s | x{improvement:.3f} "
                 f"| {diff:+.2%} |\n"
             )
+            if test_name in timings:
+                timings[test_name].append(test_time)
+            else:
+                timings[test_name] = [test_time]
 
         # Add images
         """
@@ -170,7 +175,7 @@ if __name__ == "__main__":
         ) as summary_file:
             summary_file.write(summary)
         with open(TIMINGS, "wb") as timings_file_w:
-            pickle.dump(results.timings, timings_file_w)
+            pickle.dump(timings, timings_file_w)
 
     if not results.wasSuccessful():
         sys.exit(-1)

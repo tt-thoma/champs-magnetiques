@@ -3,10 +3,11 @@ Animation 1 : Réfraction à travers un diélectrique (interface air-verre)
 Montre une onde plane traversant une interface entre deux milieux avec indices différents.
 """
 
-import subprocess
-
+import matplotlib.animation
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.image import AxesImage
+from matplotlib.lines import Line2D
 
 from champs_v4.fdtd_yee_3d import Yee3D
 
@@ -39,9 +40,9 @@ def main():
 
     sim.set_materials(epsilon_r, sigma)
 
-    print(f"Materiaux configures :")
-    print(f"  - Air (gauche) : epsilon_r = 1.0")
-    print(f"  - Verre (droite) : epsilon_r = 2.25 (n = 1.5)")
+    print("Materiaux configures :")
+    print("  - Air (gauche) : epsilon_r = 1.0")
+    print("  - Verre (droite) : epsilon_r = 2.25 (n = 1.5)")
 
     # Source : impulsion gaussienne
     source_x = 30
@@ -49,7 +50,7 @@ def main():
     omega = 2 * np.pi * freq
     wavelength = c0 / freq
 
-    print(f"Source : Impulsion gaussienne")
+    print("Source : Impulsion gaussienne")
     print(f"Frequence : {freq / 1e9:.1f} GHz (lambda = {wavelength * 1e3:.2f} mm)")
 
     # Simulation avec génération de frames
@@ -67,81 +68,70 @@ def main():
     t0 = 80 * dt
     spread = 25 * dt
 
-    frame_count = 0
-    for n in range(nsteps):
-        # Injection impulsion gaussienne
-        t = n * dt
-        pulse = np.exp(-(((t - t0) / spread) ** 2)) * np.sin(omega * t)
-        source_value = pulse
+    Ez_slice = sim.Ez[:, :, 0]
 
-        # Injecter sur toute la colonne
-        for j in range(ny):
-            sim.Ez[source_x, j, 0] += source_value
+    fig, ax = plt.subplots(figsize=(10, 8))
+    im = ax.imshow(
+        Ez_slice.T,
+        origin="lower",
+        cmap="RdBu_r",
+        vmin=-0.5,
+        vmax=0.5,
+        extent=(0, nx, 0, ny),
+    )
+    ax.axvline(
+        x=nx // 2,
+        color="yellow",
+        linestyle="--",
+        linewidth=2,
+        alpha=0.5,
+        label="Interface",
+    )
+    ax.set_xlabel("X (cellules)")
+    ax.set_ylabel("Y (cellules)")
+    ax.set_title("Réfraction Air-Verre")
+    ax.legend()
+    plt.colorbar(im, ax=ax, label="Ez (V/m)")
+    plt.tight_layout()
 
-        sim.step()
+    rendered: list[int] = []
 
-        # Sauvegarder frame
-        if n % frame_interval == 0:
-            Ez_slice = sim.Ez[:, :, 0]
+    # for n in range(nsteps):
+    def update(frame: int) -> tuple[AxesImage,]:
+        nonlocal rendered
+        if frame in rendered:
+            return (im,)
+        else:
+            rendered.append(frame)
+        for _ in range(frame_interval):
+            # Injection impulsion gaussienne
+            t = frame * frame_interval * dt
+            pulse = np.exp(-(((t - t0) / spread) ** 2)) * np.sin(omega * t)
+            source_value = pulse
 
-            fig, ax = plt.subplots(figsize=(10, 8))
-            im = ax.imshow(
-                Ez_slice.T,
-                origin="lower",
-                cmap="RdBu_r",
-                vmin=-0.5,
-                vmax=0.5,
-                extent=[0, nx, 0, ny],
-            )
-            ax.axvline(
-                x=nx // 2,
-                color="yellow",
-                linestyle="--",
-                linewidth=2,
-                alpha=0.5,
-                label="Interface",
-            )
-            ax.set_xlabel("X (cellules)")
-            ax.set_ylabel("Y (cellules)")
-            ax.set_title(f"Réfraction Air-Verre - Pas {n}/{nsteps}")
-            ax.legend()
-            plt.colorbar(im, ax=ax, label="Ez (V/m)")
-            plt.tight_layout()
+            # Injecter sur toute la colonne
+            for j in range(ny):
+                sim.Ez[source_x, j, 0] += source_value
 
-            frame_path = frames_dir / f"frame_{frame_count:04d}.png"
-            plt.savefig(frame_path, dpi=100)
-            plt.close(fig)
-            frame_count += 1
+            sim.step()
 
-        if n % 100 == 0:
-            print(f"  Pas {n}/{nsteps} - {frame_count} frames")
+        Ez_slice = sim.Ez[:, :, 0]
+        im.set_data(Ez_slice.T)
 
-    print(f"Simulation terminée, {frame_count} frames générées")
+        if (frame * frame_interval) % 100 == 0:
+            print(f"  Pas {frame * frame_interval}/{nsteps} - {frame} frames")
 
-    # Créer MP4 avec ffmpeg
-    mp4_path = out_dir / "refraction_animation.mp4"
-    try:
-        cmd = [
-            "ffmpeg",
-            "-y",
-            "-framerate",
-            "20",
-            "-i",
-            str(frames_dir / "frame_%04d.png"),
-            "-c:v",
-            "libx264",
-            "-pix_fmt",
-            "yuv420p",
-            "-crf",
-            "23",
-            str(mp4_path),
-        ]
-        subprocess.run(cmd, check=True, capture_output=True)
-        print(f"\n✓ Animation MP4 créée : {mp4_path}")
-    except subprocess.CalledProcessError:
-        print(f"\n⚠ FFmpeg erreur, frames PNG disponibles dans : {frames_dir}")
-    except FileNotFoundError:
-        print(f"\n⚠ FFmpeg non trouvé, frames PNG disponibles dans : {frames_dir}")
+        return (im,)
+
+    gif_path = out_dir / "refraction_animation.gif"
+    ani = matplotlib.animation.FuncAnimation(
+        fig=fig,
+        func=update,
+        frames=nsteps // frame_interval,
+        interval=(1 / 20) * 1000,  # 20 FPS -> milliseconds interval
+        blit=True,
+    )
+    ani.save(gif_path, writer="ffmpeg")
 
     print("  Phénomène observé : Réfraction de Snell avec changement de vitesse")
 

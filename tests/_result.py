@@ -29,7 +29,7 @@ class GitHubTestResult(TextTestResult):
         durations: int | None = None,
     ) -> None:
         super().__init__(stream, descriptions, verbosity, durations=durations)
-        self.timings: dict[str, list[float]] = {}
+        self.timings: dict[str, float] = {}
 
     def startTest(self, test: unittest.case.TestCase) -> None:
         self.stream.write(f"::group::{self.getDescription(test)}\n")
@@ -74,5 +74,5 @@ class GitHubTestResult(TextTestResult):
         self.stream.flush()
 
     def addDuration(self, test: unittest.case.TestCase, elapsed: float) -> None:
-        self.timings[str(test)] = timings.get(str(test), []) + [elapsed]
+        self.timings[str(test)] = elapsed
         return super().addDuration(test, elapsed)
