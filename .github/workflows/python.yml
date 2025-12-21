@@ -77,7 +77,7 @@ jobs:
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git checkout results
         git add examples/results/
-        git commit -m --allow-empty "${{ github.run_number }}.${{ github.run_attempt }}"
+        git commit --allow-empty -m "${{ github.run_number }}.${{ github.run_attempt }}"
         git push -u origin results
         git checkout master
 
