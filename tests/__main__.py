@@ -227,6 +227,23 @@ if __name__ == "__main__":
         subprocess.run(["git", "checkout", "master"], check=True)
 
         print(f"{prev_commit=} {next_commit=}")
+        URL = (
+            "https://raw.githubusercontent.com/tt-thoma/champs-magnetiques/{0}/examples/results/"
+            "{1}/{2}"
+        )
+        summary += "\n# Results\n\n"
+        for subdir in Path("./examples/results/").iterdir():
+            folder: str = subdir.name
+            summary += f"## {folder}\n\n"
+            for subfile in subdir.iterdir():
+                image: str = subfile.name
+                summary += f"### {image}\n\n"
+                summary += "| Before | After |\n| --- | --- |\n"
+                summary += (
+                    f"| ![Before]({URL.format(prev_commit, folder, image)})"
+                    f"| ![After]({URL.format(next_commit, folder, image)})"
+                    "|\n\n"
+                )
 
         with open(
             os.environ.get("GITHUB_STEP_SUMMARY", "./tests/results/summary.md"), "w"
