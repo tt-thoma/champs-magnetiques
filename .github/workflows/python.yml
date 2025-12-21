@@ -51,7 +51,6 @@ jobs:
       with:
         path: |
           ~/.venv
-          /var/cache/apt/archives/*.deb
         key: dependencies
         restore-keys: dependencies
     - name: Install dependencies
@@ -70,10 +69,6 @@ jobs:
       run: |
         source .venv/bin/activate
         python -m tests -f -g
-    - name: gggggg
-      run: |
-        ls -l /var/cache/apt/archives/
-        ls /var/cache/apt/archives/*.deb
 
     # https://github.com/actions/cache/issues/342#issuecomment-2773231159
     - name: Save cache
