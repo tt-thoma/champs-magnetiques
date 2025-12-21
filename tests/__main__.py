@@ -3,12 +3,9 @@ import os
 import pickle
 import subprocess
 import sys
-import traceback
-import unittest
 import warnings
-from optparse import OptionParser, Values
+from optparse import Values
 from pathlib import Path
-from typing import TYPE_CHECKING
 from unittest import (
     TestSuite,
     TextTestResult,
@@ -16,6 +13,8 @@ from unittest import (
     defaultTestLoader,
 )
 
+from ._options import opts
+from ._result import TIMINGS, GitHubTestResult
 from .test_cache import TestCache
 from .test_CFL_check import TestCFLCheck
 from .test_dispersion import TestDispersion
@@ -25,78 +24,6 @@ from .test_world_basic import TestWorldBasic
 from .test_yee3d import TestYee3D
 from .test_yee_plane_wave_3d import TestYeePlaneWave3D
 from .test_yee_skin_depth import TestYeeSkinDepth
-
-if TYPE_CHECKING:
-    from unittest.runner import _WritelnDecorator
-
-    from _typeshed import OptExcInfo
-
-TIMINGS: Path = Path("./tests/results/timings.dat")
-timings: dict[str, list[float]]
-if TIMINGS.exists():
-    with open(TIMINGS, "rb") as timings_file:
-        timings = pickle.load(timings_file)
-else:
-    timings = {}
-
-
-class GitHubTestResult(TextTestResult):
-    def __init__(
-        self,
-        stream: "_WritelnDecorator",
-        descriptions: bool,
-        verbosity: int,
-        *,
-        durations: int | None = None,
-    ) -> None:
-        super().__init__(stream, descriptions, verbosity, durations=durations)
-        self.timings: dict[str, list[float]] = {}
-
-    def startTest(self, test: unittest.case.TestCase) -> None:
-        self.stream.write(f"::group::{self.getDescription(test)}\n")
-        self.stream.flush()
-        super().startTest(test)
-        self.stream.flush()
-
-    def __error(self, test: unittest.case.TestCase, err: "OptExcInfo") -> None:
-        if err[1] is not None and err[1].__traceback__ is not None:
-            pretty_err: str = traceback.format_exception(err[1])[-1].strip("\n")
-            frame: traceback.FrameSummary = traceback.extract_tb(err[1].__traceback__)[
-                -1
-            ]
-            self.stream.write(
-                f"\n::error file={frame.filename},line={frame.lineno},endLine={frame.end_lineno},col={frame.colno},"
-                f"endCol={frame.end_colno},title={str(test)}::{pretty_err}\n"
-            )
-        else:
-            self.stream.write(f"\n::error title={str(test)}::ERROR\n")
-
-    def addError(self, test: unittest.case.TestCase, err: "OptExcInfo") -> None:
-        self.__error(test, err)
-        super().addError(test, err)
-        self.stream.write("::endgroup::\n")
-        self.stream.flush()
-
-    def addSuccess(self, test: unittest.case.TestCase) -> None:
-        super().addSuccess(test)
-        self.stream.write("::endgroup::\n")
-        self.stream.flush()
-
-    def addSkip(self, test: unittest.case.TestCase, reason: str) -> None:
-        self.stream.write(f"\n::notice title={str(test)}::{reason}\n")
-        super().addSkip(test, reason)
-        self.stream.write("::endgroup::\n")
-        self.stream.flush()
-
-    def addFailure(self, test: unittest.case.TestCase, err: "OptExcInfo") -> None:
-        self.__error(test, err)
-        super().addFailure(test, err)
-        self.stream.write("::endgroup::\n")
-        self.stream.flush()
-
-    def addDuration(self, test: unittest.case.TestCase, elapsed: float) -> None:
-        self.timings[str(test)] = timings.get(str(test), []) + [elapsed]
-        return super().addDuration(test, elapsed)
 
 
 def test_suite(options: Values) -> TestSuite:
@@ -117,7 +44,7 @@ def test_suite(options: Values) -> TestSuite:
     return suite
 
 
-def custom(message, category, filename, lineno, file=None, line=None) -> None:
+def custom(message, category, filename, lineno, _file=None, _line=None) -> None:
     """Function to format a warning the standard way."""
     sys.stdout.write(
         f"\n::warning file={filename},line={lineno},title={category.__name__}::{message}\n"
@@ -127,20 +54,6 @@ def custom(message, category, filename, lineno, file=None, line=None) -> None:
 if __name__ == "__main__":
     warnings.simplefilter("always")
     warnings.showwarning = custom  # ty: ignore
-
-    parser: OptionParser = OptionParser()
-    parser.add_option("-f", "--full", action="store_true", dest="full", default=False)
-    parser.add_option(
-        "-g",
-        "--github",
-        action="store_const",
-        dest="resultclass",
-        default=None,
-        const=GitHubTestResult,
-    )
-    opts: Values
-    args: list[str]
-    opts, args = parser.parse_args()
 
     runner: TextTestRunner = TextTestRunner(
         verbosity=4,
@@ -245,8 +158,6 @@ if __name__ == "__main__":
                 )
 
         subprocess.run(["git", "checkout", "master"], check=True)
-
-
 
         with open(
             os.environ.get("GITHUB_STEP_SUMMARY", "./tests/results/summary.md"), "w"

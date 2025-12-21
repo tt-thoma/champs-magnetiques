@@ -9,6 +9,12 @@ on:
   pull_request:
     branches: [ "master" ]
   workflow_dispatch:
+    inputs:
+      examples:
+        description: 'Run example animations'
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -70,7 +76,7 @@ jobs:
         NUMBA_CPU_NAME: generic
       run: |
         source .venv/bin/activate
-        python -m tests -f -g
+        python -m tests -f -g ${{ inputs.examples && '-e' || ' ' }}
 
     # https://github.com/actions/cache/issues/342#issuecomment-2773231159
     - name: Save cache

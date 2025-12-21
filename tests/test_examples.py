@@ -2,9 +2,11 @@ from importlib import import_module
 from pkgutil import iter_modules
 from types import ModuleType
 from typing import Any, Callable
-from unittest import TestCase, main
+from unittest import TestCase, main, skip
 
 from examples import base_dir
+
+from ._options import opts
 
 
 class TestExamplesMeta(type):
@@ -18,10 +20,21 @@ class TestExamplesMeta(type):
             return test
 
         for mod in iter_modules([base_dir]):
-            if mod.name.startswith("demo"):  # mod.name.startswith("anim")
-                module_path: str = f"examples.{mod.name}"
-                module: ModuleType = import_module(module_path)
+            module_path: str
+            module: ModuleType
+            if mod.name.startswith("demo"):
+                module_path = f"examples.{mod.name}"
+                module = import_module(module_path)
                 dict[f"test_{mod.name.lstrip('demo_')}"] = new_test(module.main)
+            if mod.name.startswith("anim"):
+                module_path = f"examples.{mod.name}"
+                module = import_module(module_path)
+                if opts.examples:
+                    dict[f"test_{mod.name.lstrip('anim_')}"] = new_test(module.main)
+                else:
+                    dict[f"test_{mod.name.lstrip('anim_')}"] = skip(
+                        "Examples disabled"
+                    )(new_test(module.main))
 
         return type.__new__(mcs, name, bases, dict)
 
