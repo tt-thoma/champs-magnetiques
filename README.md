@@ -270,5 +270,3 @@ Or with pytest (if installed):
 ```bash
 pytest tests/
 ```
-
-<video src="https://raw.githubusercontent.com/tt-thoma/champs-magnetiques/ec6ede8a46403ad3e2bf4dd91e4d598b3ea0f5d3/examples/results/anim_03_lossy/lossy_medium.mp4" />
