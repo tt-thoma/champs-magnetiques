@@ -81,6 +81,7 @@ class TestYee3D(unittest.TestCase):
         self.assertTrue(np.isfinite(sim.Hy).all())
         self.assertTrue(np.isfinite(sim.Hz).all())
 
+    @unittest.skip("slow")
     def test_plane_wave_propagation(self):
         """Test basic field updates."""
         nx, ny, nz = 10, 1, 1

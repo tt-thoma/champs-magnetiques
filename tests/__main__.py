@@ -224,7 +224,6 @@ if __name__ == "__main__":
             .stdout.strip()
             .decode()
         )
-        subprocess.run(["git", "checkout", "master"], check=True)
 
         print(f"{prev_commit=} {next_commit=}")
         URL = (
@@ -244,6 +243,10 @@ if __name__ == "__main__":
                     f"| ![After]({URL.format(next_commit, folder, image)})"
                     "|\n\n"
                 )
+
+        subprocess.run(["git", "checkout", "master"], check=True)
+
+
 
         with open(
             os.environ.get("GITHUB_STEP_SUMMARY", "./tests/results/summary.md"), "w"
