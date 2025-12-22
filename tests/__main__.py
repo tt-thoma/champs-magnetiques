@@ -88,7 +88,7 @@ if __name__ == "__main__":
             )
             diff: float = (test_time - previous_time) / previous_time
             summary += (
-                f"| {test_name} | {previous_time:.3f} s | {previous_time:.3f} s | x{improvement:.3f} "
+                f"| {test_name} | {previous_time:.3f} s | {test_time:.3f} s | x{improvement:.3f} "
                 f"| {diff:+.2%} |\n"
             )
             if test_name in timings:
@@ -161,13 +161,34 @@ if __name__ == "__main__":
                 if subfile.is_file():
                     image: str = subfile.name
                     summary += f"### {image}\n\n"
-                    summary += "| Before | After |\n| --- | --- |\n"
-                    summary += (
-                        f"| ![Before]({URL.format(prev_commit, folder, image)})"
-                        f"| ![After]({URL.format(next_commit, folder, image)})"
-                        "|\n\n"
-                    )
+                    if subfile.suffix == ".mp4":
+                        summary += (
+                            f"#### Before\n\n{URL.format(prev_commit, folder, image)}\n\n"
+                            f"#### After\n\n{URL.format(next_commit, folder, image)}\n\n"
+                        )
+                    else:
+                        summary += "| Before | After |\n| --- | --- |\n"
+                        summary += (
+                            f"| ![Before]({URL.format(prev_commit, folder, image)})"
+                            f"| ![After]({URL.format(next_commit, folder, image)})"
+                            "|\n\n"
+                        )
+        with open("README.md", "w") as summary_file:
+            summary_file.write(summary)
 
+        subprocess.run(["git", "add", "README.md"], check=True)
+        subprocess.run(
+            [
+                "git",
+                "commit",
+                "--allow-empty",
+                "-m",
+                datetime.datetime.now().isoformat(),
+            ],
+            check=True,
+        )
+        if not opts.local:
+            subprocess.run(["git", "push", "-u", "origin", "results"], check=True)
         subprocess.run(["git", "checkout", "master"], check=True)
 
         with open(
