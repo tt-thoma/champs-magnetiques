@@ -1,7 +1,11 @@
 import unittest
+from pathlib import Path
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
+OUT: Path = Path("./tests/results/")
+OUT.mkdir(parents=True, exist_ok=True)
 
 
 class TestDispersion(unittest.TestCase):
@@ -30,33 +34,39 @@ class TestDispersion(unittest.TestCase):
             from scipy.optimize import fsolve
 
             def dispersion_eq(k):
-                return np.cos(omega * dt) - 1 + 2 * (c * dt / dx)**2 * np.sin(k * dx / 2)**2
+                return (
+                    np.cos(omega * dt)
+                    - 1
+                    + 2 * (c * dt / dx) ** 2 * np.sin(k * dx / 2) ** 2
+                )
 
             # Initial guess k = omega / c
             k_guess = k_exact
             k_num = fsolve(dispersion_eq, k_guess)[0]
 
-            print(f"Frequency {f/1e6} MHz: k_exact = {k_exact:.4f}, k_num = {k_num:.4f}, error = {abs(k_num - k_exact)/k_exact * 100:.2f}%")
+            print(
+                f"Frequency {f / 1e6} MHz: k_exact = {k_exact:.4f}, k_num = {k_num:.4f}, error = {abs(k_num - k_exact) / k_exact * 100:.2f}%"
+            )
 
             k_numerical.append(k_num)
 
         # Plot
-        k_exact_list = [2*np.pi*f / c for f in frequencies]
+        k_exact_list = [2 * np.pi * f / c for f in frequencies]
         k_num_list = k_numerical
 
         plt.figure()
-        plt.plot(frequencies, k_exact_list, 'o-', label='Exact')
-        plt.plot(frequencies, k_num_list, 's-', label='Numerical')
-        plt.xlabel('Frequency (Hz)')
-        plt.ylabel('Wavenumber k (rad/m)')
-        plt.title('Dispersion Relation: Exact vs Numerical')
+        plt.plot(frequencies, k_exact_list, "o-", label="Exact")
+        plt.plot(frequencies, k_num_list, "s-", label="Numerical")
+        plt.xlabel("Frequency (Hz)")
+        plt.ylabel("Wavenumber k (rad/m)")
+        plt.title("Dispersion Relation: Exact vs Numerical")
         plt.legend()
         plt.grid(True)
-        plt.savefig('tests/results/dispersion_test.png', dpi=150)
-        #plt.show()  # Don't show plot since it slows down tests
+        plt.savefig(OUT / "dispersion_test.png", dpi=150)
+        # plt.show()  # Don't show plot since it slows down tests
 
         print("Dispersion test completed. Plot saved as dispersion_test.png")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -270,4 +270,3 @@ Or with pytest (if installed):
 ```bash
 pytest tests/
 ```
-
