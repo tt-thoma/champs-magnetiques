@@ -8,17 +8,23 @@ Ce script montre comment utiliser les sondes pour analyser le contenu
 fréquentiel des champs électromagnétiques enregistrés.
 """
 
-import sys
 import os
-import numpy as np
+import sys
+from pathlib import Path
+
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.gridspec import GridSpec
 
 from champs_v4.fdtd_yee_3d import Yee3D
 
+from . import results_dir
+
 
 def main():
     """Simulation avec analyse fréquentielle des sondes."""
+    out_dir: Path = results_dir / "demo_fft_probes"
+    out_dir.mkdir(parents=True, exist_ok=True)
     
     print("="*70)
     print(" ANALYSE DE FOURIER DES SONDES ÉLECTROMAGNÉTIQUES")
@@ -138,7 +144,7 @@ def main():
                 axes[idx].set_xlabel('Temps (ns)', fontsize=10)
     
     plt.tight_layout()
-    plt.savefig('fft_probe_signals.png', dpi=150, bbox_inches='tight')
+    plt.savefig(out_dir / 'fft_probe_signals.png', dpi=150, bbox_inches='tight')
     print("✓ fft_probe_signals.png")
     plt.close()
     
@@ -174,7 +180,7 @@ def main():
                     axes[idx].plot(f*1e-9, amp, 'ro', markersize=8)
     
     plt.tight_layout()
-    plt.savefig('fft_probe_spectra.png', dpi=150, bbox_inches='tight')
+    plt.savefig(out_dir / 'fft_probe_spectra.png', dpi=150, bbox_inches='tight')
     print("✓ fft_probe_spectra.png")
     plt.close()
     
@@ -209,7 +215,7 @@ def main():
     ax.set_xlim(0, 15)
     
     plt.tight_layout()
-    plt.savefig('fft_probe_comparison.png', dpi=150, bbox_inches='tight')
+    plt.savefig(out_dir / 'fft_probe_comparison.png', dpi=150, bbox_inches='tight')
     print("✓ fft_probe_comparison.png")
     plt.close()
     
@@ -234,7 +240,7 @@ def main():
     ax.set_xlim(0, 15)
     
     plt.tight_layout()
-    plt.savefig('fft_probe_power.png', dpi=150, bbox_inches='tight')
+    plt.savefig(out_dir / 'fft_probe_power.png', dpi=150, bbox_inches='tight')
     print("✓ fft_probe_power.png")
     
     print("\n" + "="*70)
