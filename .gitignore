@@ -1,6 +1,5 @@
 .idea/
 .venv/
-.vscode/
 
 **__pycache__/
 .numba_cache/

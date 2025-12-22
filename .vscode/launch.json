@@ -1,0 +1,26 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Examples: Anim 01 Dieletric Refraction",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "examples.anim_01_dielectric_refraction"
+        },
+        {
+            "name": "Examples: Anim 01 Vector Refraction",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "examples.anim_01_vector_refraction"
+        },
+        {
+            "name": "Examples: Anim 02 Metal Reflection",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "examples.anim_01_metal_reflection"
+        }
+    ]
+}
