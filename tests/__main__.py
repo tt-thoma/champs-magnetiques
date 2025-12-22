@@ -173,7 +173,22 @@ if __name__ == "__main__":
                             f"| ![After]({URL.format(next_commit, folder, image)})"
                             "|\n\n"
                         )
+        with open("README.md", "w") as summary_file:
+            summary_file.write(summary)
 
+        subprocess.run(["git", "add", "README.md"], check=True)
+        subprocess.run(
+            [
+                "git",
+                "commit",
+                "--allow-empty",
+                "-m",
+                datetime.datetime.now().isoformat(),
+            ],
+            check=True,
+        )
+        if not opts.local:
+            subprocess.run(["git", "push", "-u", "origin", "results"], check=True)
         subprocess.run(["git", "checkout", "master"], check=True)
 
         with open(
