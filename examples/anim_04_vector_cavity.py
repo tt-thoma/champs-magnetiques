@@ -7,9 +7,6 @@ import sys
 import os
 from pathlib import Path
 
-parent_dir = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(parent_dir))
-
 from champs_v4.fdtd_yee_3d import Yee3D
 from champs_v4.visualization.vector_field_viz import VectorFieldVisualizer
 import matplotlib.pyplot as plt
