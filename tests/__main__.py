@@ -1,6 +1,5 @@
 import datetime
 from math import nan
-from copy import copy
 import os
 import pickle
 import subprocess
@@ -83,13 +82,13 @@ if __name__ == "__main__":
                 results.timings.items(), key=lambda item: item[1], reverse=True
             )
         }.items():
-            previous_time: float = copy(timings[test_name][-1] if test_name in timings else float("inf"))
+            previous_time: float = timings[test_name][-1] if test_name in timings else float("inf")
             improvement: float = (
                 test_time / previous_time if test_name in timings else nan
             )
             diff: float = (test_time - previous_time) / previous_time
             summary += (
-                f"| {test_name} | {previous_time:.3f} s | {previous_time:.3f} s | x{improvement:.3f} "
+                f"| {test_name} | {previous_time:.3f} s | {test_time:.3f} s | x{improvement:.3f} "
                 f"| {diff:+.2%} |\n"
             )
             if test_name in timings:
@@ -162,11 +161,18 @@ if __name__ == "__main__":
                 if subfile.is_file():
                     image: str = subfile.name
                     summary += f"### {image}\n\n"
-                    summary += "| Before | After |\n| --- | --- |\n"
-                    summary += (
-                        f"#### Before\n\n{URL.format(prev_commit, folder, image)}\n\n"
-                        f"#### After\n\n{URL.format(next_commit, folder, image)}\n\n"
-                    )
+                    if subfile.suffix == ".mp4":
+                        summary += (
+                            f"#### Before\n\n{URL.format(prev_commit, folder, image)}\n\n"
+                            f"#### After\n\n{URL.format(next_commit, folder, image)}\n\n"
+                        )
+                    else:
+                        summary += "| Before | After |\n| --- | --- |\n"
+                        summary += (
+                            f"| ![Before]({URL.format(prev_commit, folder, image)})"
+                            f"| ![After]({URL.format(next_commit, folder, image)})"
+                            "|\n\n"
+                        )
 
         subprocess.run(["git", "checkout", "master"], check=True)
 
