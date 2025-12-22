@@ -8,16 +8,22 @@ Ce script démontre comment placer des sondes dans l'espace pour
 enregistrer l'évolution temporelle des champs et de l'énergie.
 """
 
-import sys
 import os
-import numpy as np
+import sys
+from pathlib import Path
+
 import matplotlib.pyplot as plt
+import numpy as np
 
 from champs_v4.fdtd_yee_3d import Yee3D
+
+from . import results_dir
 
 
 def main():
     """Simulation avec sondes pour observer la propagation d'une onde."""
+    out_dir: Path = results_dir / "demo_probes"
+    out_dir.mkdir(parents=True, exist_ok=True)
     
     # === Configuration de la grille ===
     nx, ny, nz = 200, 100, 1  # Grille 2D (slice z mince)
@@ -124,7 +130,7 @@ def main():
     axes[2].set_yscale('log')
     
     plt.tight_layout()
-    plt.savefig('probe_example_source.png', dpi=150, bbox_inches='tight')
+    plt.savefig(out_dir / 'probe_example_source.png', dpi=150, bbox_inches='tight')
     print("✓ Sauvegardé: probe_example_source.png")
     
     # === Graphique 2: Comparaison des sondes en ligne ===
@@ -152,7 +158,7 @@ def main():
     axes[1].set_yscale('log')
     
     plt.tight_layout()
-    plt.savefig('probe_example_line.png', dpi=150, bbox_inches='tight')
+    plt.savefig(out_dir / 'probe_example_line.png', dpi=150, bbox_inches='tight')
     print("✓ Sauvegardé: probe_example_line.png")
     
     # === Graphique 3: Sondes aux coins ===
@@ -174,7 +180,7 @@ def main():
     ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('probe_example_corners.png', dpi=150, bbox_inches='tight')
+    plt.savefig(out_dir / 'probe_example_corners.png', dpi=150, bbox_inches='tight')
     print("✓ Sauvegardé: probe_example_corners.png")
     
     # === Sauvegarder les données ===
