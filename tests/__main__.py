@@ -1,5 +1,6 @@
 import datetime
 from math import nan
+from copy import copy
 import os
 import pickle
 import subprocess
@@ -82,7 +83,7 @@ if __name__ == "__main__":
                 results.timings.items(), key=lambda item: item[1], reverse=True
             )
         }.items():
-            previous_time: float = timings[test_name][-1] if test_name in timings else float("inf")
+            previous_time: float = copy(timings[test_name][-1] if test_name in timings else float("inf"))
             improvement: float = (
                 test_time / previous_time if test_name in timings else nan
             )
@@ -163,9 +164,8 @@ if __name__ == "__main__":
                     summary += f"### {image}\n\n"
                     summary += "| Before | After |\n| --- | --- |\n"
                     summary += (
-                        f"| ![Before]({URL.format(prev_commit, folder, image)})"
-                        f"| ![After]({URL.format(next_commit, folder, image)})"
-                        "|\n\n"
+                        f"#### Before\n\n{URL.format(prev_commit, folder, image)}\n\n"
+                        f"#### After\n\n{URL.format(next_commit, folder, image)}\n\n"
                     )
 
         subprocess.run(["git", "checkout", "master"], check=True)
