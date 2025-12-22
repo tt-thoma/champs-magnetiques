@@ -214,21 +214,27 @@ def step(
 
         b_ex_dy: ndarray_t,
         c_ex_dy: ndarray_t,
+        kappa_ex_dy: ndarray_t,
 
         b_ex_dz: ndarray_t,
         c_ex_dz: ndarray_t,
+        kappa_ex_dz: ndarray_t,
 
         b_ey_dx: ndarray_t,
         c_ey_dx: ndarray_t,
+        kappa_ey_dx: ndarray_t,
 
         b_ey_dz: ndarray_t,
         c_ey_dz: ndarray_t,
+        kappa_ey_dz: ndarray_t,
 
         b_ez_dx: ndarray_t,
         c_ez_dx: ndarray_t,
+        kappa_ez_dx: ndarray_t,
 
         b_ez_dy: ndarray_t,
         c_ez_dy: ndarray_t,
+        kappa_ez_dy: ndarray_t,
 
         psi_hx_dy: ndarray_t,
         psi_hx_dz: ndarray_t,
@@ -241,21 +247,27 @@ def step(
 
         b_hx_dy: ndarray_t,
         c_hx_dy: ndarray_t,
+        kappa_hx_dy: ndarray_t,
 
         b_hx_dz: ndarray_t,
         c_hx_dz: ndarray_t,
+        kappa_hx_dz: ndarray_t,
 
         b_hy_dx: ndarray_t,
         c_hy_dx: ndarray_t,
+        kappa_hy_dx: ndarray_t,
 
         b_hy_dz: ndarray_t,
         c_hy_dz: ndarray_t,
+        kappa_hy_dz: ndarray_t,
 
         b_hz_dx: ndarray_t,
         c_hz_dx: ndarray_t,
+        kappa_hz_dx: ndarray_t,
 
         b_hz_dy: ndarray_t,
         c_hz_dy: ndarray_t,
+        kappa_hz_dy: ndarray_t,
 
         dampH_Hx: ndarray_t,
         dampH_Hy: ndarray_t,
@@ -275,13 +287,13 @@ def step(
     # apply CPML auxiliary psi (if initialized)
     if psi_ez_dy is not None:
         psi_ez_dy = b_ez_dy * psi_ez_dy + c_ez_dy * dEz_dy
-        dEz_eff = dEz_dy + psi_ez_dy
+        dEz_eff = dEz_dy / kappa_ez_dy + psi_ez_dy
     else:
         dEz_eff = dEz_dy
 
     if psi_ey_dz is not None:
         psi_ey_dz = b_ey_dz * psi_ey_dz + c_ey_dz * dEy_dz
-        dEy_eff = dEy_dz + psi_ey_dz
+        dEy_eff = dEy_dz / kappa_ey_dz + psi_ey_dz
     else:
         dEy_eff = dEy_dz
 
@@ -292,13 +304,13 @@ def step(
 
     if psi_ex_dz is not None:
         psi_ex_dz = b_ex_dz * psi_ex_dz + c_ex_dz * dEx_dz
-        dEx_eff = dEx_dz + psi_ex_dz
+        dEx_eff = dEx_dz / kappa_ex_dz + psi_ex_dz
     else:
         dEx_eff = dEx_dz
 
     if psi_ez_dx is not None:
         psi_ez_dx = b_ez_dx * psi_ez_dx + c_ez_dx * dEz_dx
-        dEz_eff2 = dEz_dx + psi_ez_dx
+        dEz_eff2 = dEz_dx / kappa_ez_dx + psi_ez_dx
     else:
         dEz_eff2 = dEz_dx
 
@@ -309,13 +321,13 @@ def step(
 
     if psi_ey_dx is not None:
         psi_ey_dx = b_ey_dx * psi_ey_dx + c_ey_dx * dEy_dx
-        dEy_eff2 = dEy_dx + psi_ey_dx
+        dEy_eff2 = dEy_dx / kappa_ey_dx + psi_ey_dx
     else:
         dEy_eff2 = dEy_dx
 
     if psi_ex_dy is not None:
         psi_ex_dy = b_ex_dy * psi_ex_dy + c_ex_dy * dEx_dy
-        dEx_eff2 = dEx_dy + psi_ex_dy
+        dEx_eff2 = dEx_dy / kappa_ex_dy + psi_ex_dy
     else:
         dEx_eff2 = dEx_dy
 
@@ -351,13 +363,13 @@ def step(
         if psi_hz_dy is not None:
             # psi_hz_dy shape should match (nx,ny,nz)
             psi_hz_dy = b_hz_dy * psi_hz_dy + c_hz_dy * dHz_dy
-            dHz_eff = dHz_dy + psi_hz_dy
+            dHz_eff = dHz_dy / kappa_hz_dy + psi_hz_dy
         else:
             dHz_eff = dHz_dy
 
         if psi_hy_dz is not None:
             psi_hy_dz = b_hy_dz * psi_hy_dz + c_hy_dz * dHy_dz
-            dHy_eff = dHy_dz + psi_hy_dz
+            dHy_eff = dHy_dz / kappa_hy_dz + psi_hy_dz
         else:
             dHy_eff = dHy_dz
 
@@ -379,12 +391,12 @@ def step(
 
         if psi_hx_dz is not None:
             psi_hx_dz = b_hx_dz * psi_hx_dz + c_hx_dz * dHx_dz
-            dHx_eff = dHx_dz + psi_hx_dz
+            dHx_eff = dHx_dz / kappa_hx_dz + psi_hx_dz
         else:
             dHx_eff = dHx_dz
         if psi_hz_dx is not None:
             psi_hz_dx = b_hz_dx * psi_hz_dx + c_hz_dx * dHz_dx
-            dHz_eff2 = dHz_dx + psi_hz_dx
+            dHz_eff2 = dHz_dx / kappa_hz_dx + psi_hz_dx
         else:
             dHz_eff2 = dHz_dx
         curlHy_eff = dHx_eff - dHz_eff2
@@ -405,12 +417,12 @@ def step(
 
         if psi_hy_dx is not None:
             psi_hy_dx = b_hy_dx * psi_hy_dx + c_hy_dx * dHy_dx
-            dHy_eff3 = dHy_dx + psi_hy_dx
+            dHy_eff3 = dHy_dx / kappa_hy_dx + psi_hy_dx
         else:
             dHy_eff3 = dHy_dx
         if psi_hx_dy is not None:
             psi_hx_dy = b_hx_dy * psi_hx_dy + c_hx_dy * dHx_dy
-            dHx_eff3 = dHx_dy + psi_hx_dy
+            dHx_eff3 = dHx_dy / kappa_hx_dy + psi_hx_dy
         else:
             dHx_eff3 = dHx_dy
 
