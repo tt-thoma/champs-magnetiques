@@ -1,4 +1,5 @@
 import datetime
+from io import TextIOWrapper
 from math import nan
 import os
 import pickle
@@ -58,6 +59,13 @@ def custom(message, category, filename, lineno, _file=None, _line=None) -> None:
 if __name__ == "__main__":
     warnings.simplefilter("always")
     warnings.showwarning = custom  # ty: ignore
+
+    # When optimized, don't even output anything :)
+    if opts.optimized:
+        sys.stdout = open(os.devnull, "w")
+    else:
+        if isinstance(sys.stdout, TextIOWrapper):
+            sys.stdout.reconfigure(line_buffering=True)
 
     runner: TextTestRunner = TextTestRunner(
         verbosity=4,

@@ -18,6 +18,9 @@ parser.add_option(
 parser.add_option(
     "-l", "--local", action="store_true", dest="local", default=False
 )
+parser.add_option(
+    "-o", "--optimized", action="store_true", dest="optimized", default=False
+)
 opts: Values
 args: list[str]
 opts, args = parser.parse_args()
