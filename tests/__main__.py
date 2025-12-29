@@ -140,7 +140,7 @@ if __name__ == "__main__":
                 ],
                 check=True,
             )
-        subprocess.run(["git", "stash", "push"], check=True)
+        subprocess.run(["git", "stash", "push", "--all"], check=True)
         subprocess.run(["git", "checkout", "results"], check=True)
         prev_commit: str = (
             subprocess.run(
