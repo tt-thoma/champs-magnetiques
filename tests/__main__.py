@@ -1,11 +1,11 @@
 import datetime
-from io import TextIOWrapper
-from math import nan
 import os
 import pickle
 import subprocess
 import sys
 import warnings
+from io import TextIOWrapper
+from math import nan
 from optparse import Values
 from pathlib import Path
 from unittest import (
@@ -83,26 +83,39 @@ if __name__ == "__main__":
             "| :--- | :---: | :---: | ---: | ---: |\n"
         )
         test_name: str
-        test_time: float
-        for test_name, test_time in {
-            k: v
-            for k, v in sorted(
-                results.timings.items(), key=lambda item: item[1], reverse=True
+
+        all_tests: set[str] = set(results.timings.keys()) | set(timings.keys())
+        total_time: float = sum(results.timings.values())
+        print(f"{all_tests=}")
+
+        for test_name in sorted(
+            all_tests,
+            key=lambda tn: results.timings[tn]
+            if tn in results.timings
+            else timings[tn][-1],
+            reverse=True
+        ):
+            previous_time: float = (
+                timings[test_name][-1] if test_name in timings else float("inf")
             )
-        }.items():
-            previous_time: float = timings[test_name][-1] if test_name in timings else float("inf")
-            improvement: float = (
-                test_time / previous_time if test_name in timings else nan
-            )
-            diff: float = (test_time - previous_time) / previous_time
-            summary += (
-                f"| {test_name} | {previous_time:.3f} s | {test_time:.3f} s | x{improvement:.3f} "
-                f"| {diff:+.2%} |\n"
-            )
-            if test_name in timings:
-                timings[test_name].append(test_time)
+            if test_name in results.timings:
+                test_time: float = results.timings[test_name]
+
+                if test_name in timings:
+                    timings[test_name].append(test_time)
+                else:
+                    timings[test_name] = [test_time]
+
+                improvement: float = test_time / previous_time
+                time_diff: float = test_time - previous_time
+                diff: float = time_diff / total_time
+
+                summary += (
+                    f"| {test_name} | {previous_time:.3f} s | {test_time:.3f} s | x{improvement:.3f} "
+                    f"| {diff:+.2%} |\n"
+                )
             else:
-                timings[test_name] = [test_time]
+                summary += f"| {test_name} | {previous_time:.3f} s | :fast_forward: | = | = |\n"
 
         # Add images
         """
@@ -127,6 +140,7 @@ if __name__ == "__main__":
                 ],
                 check=True,
             )
+        subprocess.run(["git", "stash", "push"], check=True)
         subprocess.run(["git", "checkout", "results"], check=True)
         prev_commit: str = (
             subprocess.run(
@@ -136,6 +150,7 @@ if __name__ == "__main__":
             .decode()
         )
         subprocess.run(["git", "add", "examples/results/"], check=True)
+        subprocess.run(["git", "add", "tests/results/"], check=True)
         subprocess.run(
             [
                 "git",
@@ -162,10 +177,10 @@ if __name__ == "__main__":
             "{1}/{2}"
         )
         summary += "\n# Results\n\n"
-        for subdir in Path("./examples/results/").iterdir():
+        for subdir in sorted(Path("./examples/results/").iterdir()):
             folder: str = subdir.name
             summary += f"## {folder}\n\n"
-            for subfile in subdir.iterdir():
+            for subfile in sorted(subdir.iterdir()):
                 if subfile.is_file():
                     image: str = subfile.name
                     summary += f"### {image}\n\n"
@@ -198,6 +213,7 @@ if __name__ == "__main__":
         if not opts.local:
             subprocess.run(["git", "push", "-u", "origin", "results"], check=True)
         subprocess.run(["git", "checkout", "master"], check=True)
+        subprocess.run(["git", "stash", "pop"], check=True)
 
         with open(
             os.environ.get("GITHUB_STEP_SUMMARY", RESULTS / "summary.md"), "w"
