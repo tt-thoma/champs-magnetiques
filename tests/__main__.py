@@ -28,6 +28,7 @@ from .test_yee_plane_wave_3d import TestYeePlaneWave3D
 from .test_yee_skin_depth import TestYeeSkinDepth
 
 RESULTS: Path = Path("./tests/results")
+RESULTS.mkdir(parents=True, exist_ok=True)
 
 
 def test_suite(options: Values) -> TestSuite:
@@ -139,85 +140,81 @@ if __name__ == "__main__":
                 ],
                 check=True,
             )
-        subprocess.run(["git", "stash", "push"], check=True)
+        subprocess.run(["git", "stash", "push", "--all"], check=True)
         subprocess.run(["git", "checkout", "results"], check=True)
-        try:
-            prev_commit: str = (
-                subprocess.run(
-                    ["git", "rev-parse", "HEAD"], capture_output=True, check=True
-                )
-                .stdout.strip()
-                .decode()
-            )
-            subprocess.run(["git", "add", "examples/results/"], check=True)
-            subprocess.run(["git", "add", "tests/results/"], check=True)
+        prev_commit: str = (
             subprocess.run(
-                [
-                    "git",
-                    "commit",
-                    "--allow-empty",
-                    "-m",
-                    datetime.datetime.now().isoformat(),
-                ],
-                check=True,
+                ["git", "rev-parse", "HEAD"], capture_output=True, check=True
             )
-            if not opts.local:
-                subprocess.run(["git", "push", "-u", "origin", "results"], check=True)
-            next_commit: str = (
-                subprocess.run(
-                    ["git", "rev-parse", "HEAD"], capture_output=True, check=True
-                )
-                .stdout.strip()
-                .decode()
-            )
-
-            print(f"{prev_commit=} {next_commit=}")
-            URL = (
-                "https://raw.githubusercontent.com/tt-thoma/champs-magnetiques/{0}/examples/results/"
-                "{1}/{2}"
-            )
-            summary += "\n# Results\n\n"
-            for subdir in sorted(Path("./examples/results/").iterdir()):
-                folder: str = subdir.name
-                summary += f"## {folder}\n\n"
-                for subfile in sorted(subdir.iterdir()):
-                    if subfile.is_file():
-                        image: str = subfile.name
-                        summary += f"### {image}\n\n"
-                        if subfile.suffix == ".mp4":
-                            summary += (
-                                f"#### Before\n\n{URL.format(prev_commit, folder, image)}\n\n"
-                                f"#### After\n\n{URL.format(next_commit, folder, image)}\n\n"
-                            )
-                            warnings.warn(f"Video file won't embed properly: {subfile}")
-                        else:
-                            summary += "| Before | After |\n| --- | --- |\n"
-                            summary += (
-                                f"| ![Before]({URL.format(prev_commit, folder, image)})"
-                                f"| ![After]({URL.format(next_commit, folder, image)})"
-                                "|\n\n"
-                            )
-            with open("README.md", "w") as summary_file:
-                summary_file.write(summary)
-
-            subprocess.run(["git", "add", "README.md"], check=True)
+            .stdout.strip()
+            .decode()
+        )
+        subprocess.run(["git", "add", "examples/results/"], check=True)
+        subprocess.run(["git", "add", "tests/results/"], check=True)
+        subprocess.run(
+            [
+                "git",
+                "commit",
+                "--allow-empty",
+                "-m",
+                datetime.datetime.now().isoformat(),
+            ],
+            check=True,
+        )
+        if not opts.local:
+            subprocess.run(["git", "push", "-u", "origin", "results"], check=True)
+        next_commit: str = (
             subprocess.run(
-                [
-                    "git",
-                    "commit",
-                    "--allow-empty",
-                    "-m",
-                    datetime.datetime.now().isoformat(),
-                ],
-                check=True,
+                ["git", "rev-parse", "HEAD"], capture_output=True, check=True
             )
-            if not opts.local:
-                subprocess.run(["git", "push", "-u", "origin", "results"], check=True)
-        finally:
-            subprocess.run(["git", "checkout", "master"], check=True)
-            subprocess.run(["git", "stash", "pop"], check=True)
+            .stdout.strip()
+            .decode()
+        )
 
-        RESULTS.mkdir(parents=True, exist_ok=True)
+        print(f"{prev_commit=} {next_commit=}")
+        URL = (
+            "https://raw.githubusercontent.com/tt-thoma/champs-magnetiques/{0}/examples/results/"
+            "{1}/{2}"
+        )
+        summary += "\n# Results\n\n"
+        for subdir in sorted(Path("./examples/results/").iterdir()):
+            folder: str = subdir.name
+            summary += f"## {folder}\n\n"
+            for subfile in sorted(subdir.iterdir()):
+                if subfile.is_file():
+                    image: str = subfile.name
+                    summary += f"### {image}\n\n"
+                    if subfile.suffix == ".mp4":
+                        summary += (
+                            f"#### Before\n\n{URL.format(prev_commit, folder, image)}\n\n"
+                            f"#### After\n\n{URL.format(next_commit, folder, image)}\n\n"
+                        )
+                    else:
+                        summary += "| Before | After |\n| --- | --- |\n"
+                        summary += (
+                            f"| ![Before]({URL.format(prev_commit, folder, image)})"
+                            f"| ![After]({URL.format(next_commit, folder, image)})"
+                            "|\n\n"
+                        )
+        with open("README.md", "w") as summary_file:
+            summary_file.write(summary)
+
+        subprocess.run(["git", "add", "README.md"], check=True)
+        subprocess.run(
+            [
+                "git",
+                "commit",
+                "--allow-empty",
+                "-m",
+                datetime.datetime.now().isoformat(),
+            ],
+            check=True,
+        )
+        if not opts.local:
+            subprocess.run(["git", "push", "-u", "origin", "results"], check=True)
+        subprocess.run(["git", "checkout", "master"], check=True)
+        subprocess.run(["git", "stash", "pop"], check=True)
+
         with open(
             os.environ.get("GITHUB_STEP_SUMMARY", RESULTS / "summary.md"), "w"
         ) as summary_file:

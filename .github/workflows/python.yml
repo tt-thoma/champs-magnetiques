@@ -15,11 +15,6 @@ on:
         required: true
         type: boolean
         default: false
-      vectors:
-        description: 'Run example vector animations'
-        required: true
-        type: boolean
-        default: false
 
 permissions:
   contents: write
@@ -81,7 +76,7 @@ jobs:
         NUMBA_CPU_NAME: generic
       run: |
         source .venv/bin/activate
-        python -m tests -f -g ${{ inputs.examples && '-e' || ' ' }} ${{ inputs.vectors && '-v' || ' ' }}
+        python -m tests -f -g ${{ inputs.examples && '-e' || ' ' }}
 
     # https://github.com/actions/cache/issues/342#issuecomment-2773231159
     - name: Save cache
