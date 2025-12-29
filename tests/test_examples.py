@@ -30,7 +30,13 @@ class TestExamplesMeta(type):
                 module_path = f"examples.{mod.name}"
                 module = import_module(module_path)
                 if opts.examples:
-                    dict[f"test_{mod.name.lstrip('anim_')}"] = new_test(module.main)
+                    is_vector: bool = "vector" in mod.name
+                    if is_vector and not opts.vectors:
+                        dict[f"test_{mod.name.lstrip('anim_')}"] = skip(
+                            "Vector examples disabled"
+                        )(new_test(module.main))
+                    else:
+                        dict[f"test_{mod.name.lstrip('anim_')}"] = new_test(module.main)
                 else:
                     dict[f"test_{mod.name.lstrip('anim_')}"] = skip(
                         "Examples disabled"

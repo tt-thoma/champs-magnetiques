@@ -21,6 +21,9 @@ parser.add_option(
 parser.add_option(
     "-o", "--optimized", action="store_true", dest="optimized", default=False
 )
+parser.add_option(
+    "-v", "--vectors", action="store_true", dest="vectors", default=False
+)
 opts: Values
 args: list[str]
 opts, args = parser.parse_args()
