@@ -5,7 +5,6 @@ import subprocess
 import sys
 import warnings
 from io import TextIOWrapper
-from math import nan
 from optparse import Values
 from pathlib import Path
 from unittest import (
@@ -16,7 +15,7 @@ from unittest import (
 )
 
 from ._options import opts
-from ._result import TIMINGS, GitHubTestResult, timings
+from ._result import GitHubTestResult
 from .test_cache import TestCache
 from .test_CFL_check import TestCFLCheck
 from .test_dispersion import TestDispersion
@@ -77,45 +76,6 @@ if __name__ == "__main__":
 
     # Summary file
     if isinstance(results, GitHubTestResult):
-        summary: str = (
-            "# Timings\n\n| Test | Previous | Latest | Improvement | Diff |\n"
-            "| :--- | :---: | :---: | ---: | ---: |\n"
-        )
-        test_name: str
-
-        all_tests: set[str] = set(results.timings.keys()) | set(timings.keys())
-        total_time: float = sum(results.timings.values())
-        print(f"{all_tests=}")
-
-        for test_name in sorted(
-            all_tests,
-            key=lambda tn: results.timings[tn]
-            if tn in results.timings
-            else timings[tn][-1],
-            reverse=True,
-        ):
-            previous_time: float = (
-                timings[test_name][-1] if test_name in timings else float("inf")
-            )
-            if test_name in results.timings:
-                test_time: float = results.timings[test_name]
-
-                if test_name in timings:
-                    timings[test_name].append(test_time)
-                else:
-                    timings[test_name] = [test_time]
-
-                improvement: float = test_time / previous_time
-                time_diff: float = test_time - previous_time
-                diff: float = time_diff / total_time
-
-                summary += (
-                    f"| {test_name} | {previous_time:.3f} s | {test_time:.3f} s | x{improvement:.3f} "
-                    f"| {diff:+.2%} |\n"
-                )
-            else:
-                summary += f"| {test_name} | {previous_time:.3f} s | :fast_forward: | = | = |\n"
-
         # Add images
         """
         git config user.name "github-actions[bot]"
@@ -148,6 +108,57 @@ if __name__ == "__main__":
             subprocess.run(["git", "reset", "--hard"], check=True)
         subprocess.run(["git", "checkout", "results"], check=True)
         try:
+            TIMINGS: Path = Path("./tests/results/timings.dat")
+            timings: dict[str, list[float]]
+            if TIMINGS.exists():
+                with open(TIMINGS, "rb") as timings_file:
+                    timings = pickle.load(timings_file)
+            else:
+                timings = {}
+
+            summary: str = (
+                "# Timings\n\n| Test | Previous | Latest | Improvement | Diff |\n"
+                "| :--- | :---: | :---: | ---: | ---: |\n"
+            )
+            test_name: str
+
+            all_tests: set[str] = set(results.timings.keys()) | set(timings.keys())
+            total_time: float = sum(results.timings.values())
+            print(f"{all_tests=}")
+
+            for test_name in sorted(
+                all_tests,
+                key=lambda tn: results.timings[tn]
+                if tn in results.timings
+                else timings[tn][-1],
+                reverse=True,
+            ):
+                previous_time: float = (
+                    timings[test_name][-1] if test_name in timings else float("inf")
+                )
+                if test_name in results.timings:
+                    test_time: float = results.timings[test_name]
+
+                    if test_name in timings:
+                        timings[test_name].append(test_time)
+                    else:
+                        timings[test_name] = [test_time]
+
+                    improvement: float = test_time / previous_time
+                    time_diff: float = test_time - previous_time
+                    diff: float = time_diff / total_time
+
+                    summary += (
+                        f"| {test_name} | {previous_time:.3f} s | {test_time:.3f} s | x{improvement:.3f} "
+                        f"| {diff:+.2%} |\n"
+                    )
+                else:
+                    summary += f"| {test_name} | {previous_time:.3f} s | :fast_forward: | = | = |\n"
+
+            with open(TIMINGS, "wb") as timings_file_w:
+                pickle.dump(timings, timings_file_w)
+            del timings  # No longer needed
+
             prev_commit: str = (
                 subprocess.run(
                     ["git", "rev-parse", "HEAD"], capture_output=True, check=True
@@ -229,8 +240,6 @@ if __name__ == "__main__":
             os.environ.get("GITHUB_STEP_SUMMARY", RESULTS / "summary.md"), "w"
         ) as summary_file:
             summary_file.write(summary)
-        with open(TIMINGS, "wb") as timings_file_w:
-            pickle.dump(timings, timings_file_w)
 
     if not results.wasSuccessful():
         sys.exit(-1)

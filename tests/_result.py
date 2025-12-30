@@ -1,7 +1,5 @@
-import pickle
 import traceback
 import unittest
-from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest import TextTestResult
 
@@ -9,14 +7,6 @@ if TYPE_CHECKING:
     from unittest.runner import _WritelnDecorator
 
     from _typeshed import OptExcInfo
-
-TIMINGS: Path = Path("./tests/results/timings.dat")
-timings: dict[str, list[float]]
-if TIMINGS.exists():
-    with open(TIMINGS, "rb") as timings_file:
-        timings = pickle.load(timings_file)
-else:
-    timings = {}
 
 
 class GitHubTestResult(TextTestResult):
