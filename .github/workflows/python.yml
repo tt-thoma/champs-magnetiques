@@ -5,18 +5,18 @@ name: Python application
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
   workflow_dispatch:
     inputs:
       examples:
-        description: 'Run example animations'
+        description: "Run example animations"
         required: true
         type: boolean
         default: false
       vectors:
-        description: 'Run example vector animations'
+        description: "Run example vector animations"
         required: true
         type: boolean
         default: false
@@ -30,74 +30,71 @@ concurrency:
 
 jobs:
   test:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v6
-      with:
-        fetch-depth: 0
-    - name: Set up Python 3.14
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.14"
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.14"
 
-    # https://stackoverflow.com/questions/75107411/sum-expression-in-github-action-run-name
-    - name: Compute previous cache ID
-      env:
-        NUM: ${{ github.run_number }}
-      run: |
-        echo "GITHUB_RUN_NUMBER_WITH_OFFSET=$(($NUM - 1))" >> $GITHUB_ENV
-    - name: Restore cache
-      id: restoreCache
-      uses: actions/cache/restore@v4
-      with:
-        path: |
-          ./.numba_cache
-          ./tests/results/timings.dat
-        key: run-${{ env.GITHUB_RUN_NUMBER_WITH_OFFSET }}
-        restore-keys: |
-          run-${{ env.GITHUB_RUN_NUMBER_WITH_OFFSET }}
+      # https://stackoverflow.com/questions/75107411/sum-expression-in-github-action-run-name
+      - name: Compute previous cache ID
+        env:
+          NUM: ${{ github.run_number }}
+        run: |
+          echo "GITHUB_RUN_NUMBER_WITH_OFFSET=$(($NUM - 1))" >> $GITHUB_ENV
+      - name: Restore cache
+        id: restoreCache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ./.numba_cache
+          key: run-${{ env.GITHUB_RUN_NUMBER_WITH_OFFSET }}
+          restore-keys: |
+            run-${{ env.GITHUB_RUN_NUMBER_WITH_OFFSET }}
 
-    - name: Cache dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ./.venv
-        key: dependencies
-        restore-keys: dependencies
-    - name: Install dependencies
-      run: |
-        python -m venv .venv
-        source .venv/bin/activate
-        python -m pip install --upgrade pip
-        python -m pip install -r requirements.txt
-        python -m pip install -r requirements_opt.txt
-        sudo apt install ffmpeg
-    - name: Test
-      env:
-        NUMBA_CACHE_DIR: ./.numba_cache
-        NUMBA_DEBUG_CACHE: 1
-        NUMBA_CPU_NAME: generic
-      run: |
-        source .venv/bin/activate
-        python -m tests -f -g ${{ inputs.examples && '-e' || ' ' }} ${{ inputs.vectors && '-v' || ' ' }}
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./.venv
+          key: dependencies
+          restore-keys: dependencies
+      - name: Install dependencies
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements_opt.txt
+          sudo apt install ffmpeg
+      - name: Test
+        env:
+          NUMBA_CACHE_DIR: ./.numba_cache
+          NUMBA_DEBUG_CACHE: 1
+          NUMBA_CPU_NAME: generic
+        run: |
+          source .venv/bin/activate
+          python -m tests -f -g ${{ inputs.examples && '-e' || ' ' }} ${{ inputs.vectors && '-v' || ' ' }}
 
-    # https://github.com/actions/cache/issues/342#issuecomment-2773231159
-    - name: Save cache
-      uses: actions/cache/save@v4
-      id: saveCache
-      # Save the cache even if build steps fail.
-      if: always()
-      with:
-        key: run-${{ github.run_number }}
-        path: |
-          ./.numba_cache
-          ./tests/results/timings.dat
-    - name: Delete old cache
-      env:
-        GH_TOKEN: ${{ github.token }}
-      if: steps.restoreCache.outputs.cache-hit
-      # Using `--repo` makes it so that this step doesn't require checking out the
-      # repo first.
-      run: gh cache delete --repo ${{ github.repository }} run-${{ env.GITHUB_RUN_NUMBER_WITH_OFFSET }}
+      # https://github.com/actions/cache/issues/342#issuecomment-2773231159
+      - name: Save cache
+        uses: actions/cache/save@v4
+        id: saveCache
+        # Save the cache even if build steps fail.
+        if: always()
+        with:
+          key: run-${{ github.run_number }}
+          path: |
+            ./.numba_cache
+      - name: Delete old cache
+        env:
+          GH_TOKEN: ${{ github.token }}
+        if: steps.restoreCache.outputs.cache-hit
+        # Using `--repo` makes it so that this step doesn't require checking out the
+        # repo first.
+        run: gh cache delete --repo ${{ github.repository }} run-${{ env.GITHUB_RUN_NUMBER_WITH_OFFSET }}
