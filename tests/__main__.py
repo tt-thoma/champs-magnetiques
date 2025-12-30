@@ -92,7 +92,7 @@ if __name__ == "__main__":
             key=lambda tn: results.timings[tn]
             if tn in results.timings
             else timings[tn][-1],
-            reverse=True
+            reverse=True,
         ):
             previous_time: float = (
                 timings[test_name][-1] if test_name in timings else float("inf")
@@ -139,7 +139,13 @@ if __name__ == "__main__":
                 ],
                 check=True,
             )
-        subprocess.run(["git", "stash", "push"], check=True)
+        stash: subprocess.CompletedProcess = subprocess.run(
+            ["git", "stash", "create"], check=True, capture_output=True
+        )
+        stash_id: str = stash.stdout.strip().decode()
+        if stash_id:
+            subprocess.run(["git", "stash", "store", stash_id], check=True)
+            subprocess.run(["git", "reset", "--hard"], check=True)
         subprocess.run(["git", "checkout", "results"], check=True)
         try:
             prev_commit: str = (
@@ -215,7 +221,8 @@ if __name__ == "__main__":
                 subprocess.run(["git", "push", "-u", "origin", "results"], check=True)
         finally:
             subprocess.run(["git", "checkout", "master"], check=True)
-            subprocess.run(["git", "stash", "pop"], check=True)
+            if stash_id:
+                subprocess.run(["git", "stash", "apply", stash_id], check=True)
 
         RESULTS.mkdir(parents=True, exist_ok=True)
         with open(
